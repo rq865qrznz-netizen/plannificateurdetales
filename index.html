@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Mon Trésor V3</title>
+    <title>Mon Trésor V4</title>
     
     <style>
         :root {
@@ -15,7 +15,6 @@
             --text: #000000;
             --gray: #8E8E93;
             --separator: #C6C6C8;
-            --day-width: 80px; /* Largeur par défaut du calendrier */
         }
 
         body {
@@ -26,13 +25,13 @@
             padding-bottom: 90px; /* Espace menu bas */
             padding-top: 130px; /* Espace header fixe */
             -webkit-tap-highlight-color: transparent;
-            overscroll-behavior-y: none;
+            overscroll-behavior-y: none; /* Bloque le rebond global */
         }
 
         /* --- HEADER FIXE --- */
         header {
             background-color: rgba(242, 242, 247, 0.95);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
             padding: 10px 20px;
             padding-top: 50px; /* Safe area iPhone */
             text-align: center;
@@ -40,21 +39,18 @@
             position: fixed;
             top: 0; left: 0; right: 0;
             z-index: 50;
+            transition: all 0.3s;
         }
 
         h1 { font-size: 13px; text-transform: uppercase; color: var(--gray); margin: 0; letter-spacing: 1px;}
         #total-capital { font-size: 34px; font-weight: 700; margin: 4px 0; }
         
-        /* Indicateur de budget auto */
-        #auto-budget-indicator { font-size: 12px; color: var(--gray); margin-top: 5px; }
-
-        /* --- VUES (PAGES) --- */
-        .view-section { display: none; padding: 15px; animation: fadeIn 0.2s; }
+        /* --- VUES --- */
+        .view-section { display: none; padding: 15px; animation: fadeIn 0.3s; }
         .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* --- LISTE --- */
+        /* --- LISTE GLOBALE --- */
         .transaction-card {
             background: var(--card);
             border-radius: 12px;
@@ -65,61 +61,95 @@
             align-items: center;
             position: relative;
             overflow: hidden;
-            border-left: 5px solid transparent; /* Pour la couleur */
+            border-left: 5px solid transparent;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        
         .t-info { flex-grow: 1; margin-left: 10px; }
         .t-title { font-weight: 600; font-size: 16px; }
         .t-date { font-size: 12px; color: var(--gray); margin-top: 2px;}
         .t-amount { font-weight: 700; font-size: 16px; }
 
-        /* --- CALENDRIER --- */
-        #calendar-controls {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 10px;
-        }
-        
-        #calendar-scroller {
-            display: flex;
-            overflow-x: auto;
-            gap: 5px;
-            padding-bottom: 20px;
-            scroll-behavior: smooth;
+        /* --- NOUVEAU CALENDRIER (Style Ruban) --- */
+        #calendar-strip-container {
+            background: var(--card);
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            margin: -15px -15px 20px -15px; /* Pour coller aux bords */
         }
 
-        .cal-day {
-            min-width: var(--day-width);
-            background: var(--card);
-            border-radius: 8px;
-            padding: 10px 5px;
+        #calendar-strip {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 0 15px; /* Padding latéral */
+            scroll-behavior: smooth;
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        #calendar-strip::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+        .cal-day-pill {
+            min-width: 50px;
+            height: 70px;
+            background: #F2F2F7;
+            border-radius: 25px;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
-            font-size: 12px;
+            flex-shrink: 0;
+            transition: all 0.2s;
             position: relative;
         }
 
-        .cal-day.today { border: 2px solid var(--primary); }
-        .cal-date { font-weight: bold; margin-bottom: 5px; font-size: 14px;}
-        .cal-balance { font-weight: 600; margin-top: auto; padding-top: 5px; border-top: 1px solid #eee; width: 100%; text-align: center;}
+        .cal-day-pill.selected {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,122,255,0.4);
+            transform: scale(1.05);
+        }
+
+        .cal-day-pill.today {
+            border: 2px solid var(--primary);
+        }
+        /* Si today est aussi selected, on enlève la bordure car le fond est bleu */
+        .cal-day-pill.today.selected { border: 2px solid white; }
+
+        .pill-day-name { font-size: 11px; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+        .pill-date-num { font-size: 18px; font-weight: 700; }
+        .pill-dot { width: 6px; height: 6px; background: orange; border-radius: 50%; position: absolute; bottom: 8px; display: none; }
         
-        .cal-dot {
-            width: 8px; height: 8px; border-radius: 50%; margin: 1px;
+        .btn-today {
+            display: block; margin: 0 auto 10px auto;
+            background: rgba(0,122,255,0.1); color: var(--primary);
+            border: none; padding: 5px 15px; border-radius: 15px; font-size: 12px; font-weight: 600;
         }
 
-        /* --- RÉGLAGES --- */
-        .settings-group { background: var(--card); border-radius: 12px; padding: 15px; margin-bottom: 20px;}
-        .settings-title { font-size: 13px; color: var(--gray); text-transform: uppercase; margin-bottom: 10px; margin-left: 10px;}
-        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        #selected-day-details {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #day-balance-display { font-size: 28px; font-weight: 800; color: var(--primary); margin: 10px 0; }
+        .day-label { font-size: 14px; color: var(--gray); text-transform: uppercase; }
 
-        /* --- COULEURS PASTELS --- */
+        /* --- RÉGLAGES & SIMULATEUR --- */
+        .settings-group { background: var(--card); border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
+        .settings-title { font-size: 13px; color: var(--gray); text-transform: uppercase; margin-bottom: 10px; margin-left: 10px; font-weight: 600;}
+        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        
+        .sim-result-box {
+            background: #F2F2F7; border-radius: 10px; padding: 15px; margin-top: 15px; display: none;
+        }
+        .sim-diff { font-weight: bold; font-size: 14px; }
+        .sim-list { margin-top: 10px; font-size: 12px; border-top: 1px solid #ccc; padding-top: 10px; }
+
+        /* --- COULEURS --- */
         .color-selector { display: flex; gap: 10px; overflow-x: auto; padding: 5px; }
-        .color-option {
-            width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; flex-shrink: 0;
-        }
+        .color-option { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; flex-shrink: 0; }
         .color-option.selected { border-color: #000; transform: scale(1.1); }
-
-        /* Classes de couleurs (bg + border) */
         .c-white { background: #fff; border: 1px solid #ddd; }
         .c-red { background: rgba(255, 59, 48, 0.2); border-left-color: #FF3B30 !important; }
         .c-green { background: rgba(52, 199, 89, 0.2); border-left-color: #34C759 !important; }
@@ -130,27 +160,22 @@
         .c-pink { background: rgba(255, 45, 85, 0.2); border-left-color: #FF2D55 !important; }
         .c-brown { background: rgba(162, 132, 94, 0.2); border-left-color: #A2845E !important; }
 
-        /* --- TAB BAR (BAS) --- */
+        /* --- NAV & FAB --- */
         .tab-bar {
             position: fixed; bottom: 0; width: 100%;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
             border-top: 1px solid var(--separator);
-            display: flex; justify-content: space-around;
-            padding: 10px 0 30px 0;
-            z-index: 100;
+            display: flex; justify-content: space-around; padding: 10px 0 30px 0; z-index: 100;
         }
         .tab-btn { border: none; background: none; color: var(--gray); font-size: 10px; display: flex; flex-direction: column; align-items: center; }
         .tab-btn.active { color: var(--primary); }
         .tab-icon { font-size: 22px; margin-bottom: 2px; }
 
-        /* --- BOUTON FAB (+) --- */
         .fab {
             position: fixed; bottom: 100px; right: 20px;
             background: var(--primary); color: white;
             width: 56px; height: 56px; border-radius: 28px;
-            font-size: 28px; border: none;
-            box-shadow: 0 4px 12px rgba(0,122,255,0.4);
+            font-size: 28px; border: none; box-shadow: 0 4px 12px rgba(0,122,255,0.4);
             z-index: 90; display: flex; justify-content: center; align-items: center;
         }
 
@@ -167,8 +192,6 @@
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         
         input, select, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; box-sizing: border-box; font-family: inherit;}
-        
-        /* Utils */
         .hidden { display: none !important; }
         .text-danger { color: #FF3B30; }
         .text-success { color: #34C759; }
@@ -178,43 +201,80 @@
 <body>
 
     <header>
-        <h1>Solde Estimé (Aujourd'hui)</h1>
+        <h1>Solde Actuel</h1>
         <div id="total-capital">...</div>
-        <div id="auto-budget-indicator"></div>
+        <div id="auto-budget-indicator" style="font-size:12px; color:#8E8E93;"></div>
     </header>
 
     <div id="view-list" class="view-section active">
         <div id="transaction-list"></div>
-        <div style="height: 50px;"></div> </div>
+    </div>
 
     <div id="view-calendar" class="view-section">
-        <div id="calendar-controls">
-            <span>Zoom</span>
-            <input type="range" min="40" max="150" value="80" oninput="changeZoom(this.value)">
+        
+        <div id="calendar-strip-container">
+            <button class="btn-today" onclick="goToToday()">← Revenir à Aujourd'hui</button>
+            <div id="calendar-strip">
+                </div>
         </div>
-        <div id="calendar-scroller">
+
+        <div id="selected-day-details">
+            <div class="day-label" id="day-label-display">Sélectionne un jour</div>
+            <div id="day-balance-display">-- €</div>
+            <div style="font-size:12px; color:#8E8E93;">Solde estimé en fin de journée</div>
+        </div>
+
+        <div style="border-top: 1px solid #ccc; margin: 20px 0;"></div>
+        <h3 style="font-size:14px; color:#8E8E93; text-transform:uppercase;">Agenda du jour</h3>
+        <div id="day-events-list">
             </div>
     </div>
 
     <div id="view-settings" class="view-section">
-        <div class="settings-title">Budget Automatique</div>
+        
+        <div class="settings-title">Ma Trésorerie</div>
         <div class="settings-group">
             <div class="setting-row">
-                <label>Budget Hebdomadaire (€)</label>
-                <input type="number" id="setting-weekly-budget" placeholder="ex: 100" onchange="saveSettings()" style="width: 100px; margin:0;">
+                <label>Capital de départ / Ajustement (€)</label>
             </div>
-            <p style="font-size:12px; color:#666; margin:0;">
-                Ce montant sera divisé par 7 et déduit chaque jour automatiquement de ton solde futur.
+            <div style="display:flex; gap:10px;">
+                <input type="number" id="setting-initial-capital" placeholder="Solde actuel..." onchange="saveSettings()" style="margin-bottom:0;">
+                <button onclick="saveSettings()" style="background:var(--primary); color:white; border:none; border-radius:8px; width:50px;">OK</button>
+            </div>
+            <p style="font-size:11px; color:#666; margin-top:5px;">
+                Modifie ce montant pour ajuster ton solde actuel sans créer d'événement.
             </p>
+        </div>
+
+        <div class="settings-title">Visionneuse Temporelle</div>
+        <div class="settings-group">
+            <label>Voir mon solde au :</label>
+            <div style="display:flex; gap:10px;">
+                <input type="date" id="sim-date" style="margin-bottom:0;">
+                <button onclick="runSimulation()" style="background:var(--primary); color:white; border:none; border-radius:8px; padding:0 15px;">Voir</button>
+            </div>
+
+            <div id="sim-result" class="sim-result-box">
+                <div style="font-size:12px; color:#666;">Solde prévu :</div>
+                <div id="sim-balance" style="font-size:24px; font-weight:bold; color:var(--text);"></div>
+                <div id="sim-diff" class="sim-diff"></div>
+                
+                <div id="sim-list" class="sim-list">
+                    </div>
+            </div>
+        </div>
+
+        <div class="settings-title">Budget Automatique</div>
+        <div class="settings-group">
+            <label>Budget Hebdo (€)</label>
+            <input type="number" id="setting-weekly-budget" placeholder="ex: 100" onchange="saveSettings()">
         </div>
 
         <div class="settings-title">Données</div>
         <div class="settings-group">
-            <button onclick="exportData()" style="width:100%; padding:10px; background:#fff; border:1px solid #ddd; border-radius:8px;">Sauvegarder les données (Copier)</button>
-            <div style="height:10px"></div>
-            <button onclick="importData()" style="width:100%; padding:10px; background:#fff; border:1px solid #ddd; border-radius:8px;">Importer des données</button>
-            <div style="height:10px"></div>
-            <button onclick="resetApp()" style="width:100%; padding:10px; background:#fff; border:1px solid red; color:red; border-radius:8px;">Tout effacer</button>
+            <button onclick="exportData()" style="width:100%; padding:10px; margin-bottom:10px; background:#fff; border:1px solid #ddd; border-radius:8px;">Sauvegarder</button>
+            <button onclick="importData()" style="width:100%; padding:10px; margin-bottom:10px; background:#fff; border:1px solid #ddd; border-radius:8px;">Importer</button>
+            <button onclick="resetApp()" style="width:100%; padding:10px; background:#fff; border:1px solid red; color:red; border-radius:8px;">Reset Total</button>
         </div>
     </div>
 
@@ -235,7 +295,6 @@
     <div class="modal-overlay" id="modal">
         <div class="modal-content">
             <h2 id="modal-title" style="margin-top:0">Nouvel Événement</h2>
-            
             <input type="hidden" id="edit-index" value="-1">
 
             <label>Titre</label>
@@ -276,26 +335,22 @@
                 <button onclick="closeModal()" style="flex:1; padding:15px; border-radius:12px; border:none; background:#E5E5EA;">Annuler</button>
                 <button onclick="saveTransaction()" style="flex:1; padding:15px; border-radius:12px; border:none; background:var(--primary); color:white; font-weight:bold;">Sauvegarder</button>
             </div>
-            <button id="btn-delete" onclick="deleteCurrentItem()" style="width:100%; margin-top:10px; padding:15px; border:none; background:none; color:red; display:none;">Supprimer cet événement</button>
+            <button id="btn-delete" onclick="deleteCurrentItem()" style="width:100%; margin-top:10px; padding:15px; border:none; background:none; color:red; display:none;">Supprimer</button>
         </div>
     </div>
 
     <script>
         // --- DATA STORE ---
         let transactions = JSON.parse(localStorage.getItem('mb_transactions')) || [];
-        let settings = JSON.parse(localStorage.getItem('mb_settings')) || { weeklyBudget: 0 };
+        // Initial Capital par défaut à 0
+        let settings = JSON.parse(localStorage.getItem('mb_settings')) || { weeklyBudget: 0, initialCapital: 0 };
         let currentTab = 'list';
+        let selectedCalendarDate = new Date(); // Date sélectionnée dans le calendrier
 
         // --- INIT ---
         window.onload = function() {
-            // Migrer anciennes données si nécessaire (pour compatibilité)
-            if(localStorage.getItem('my_budget_data')) {
-                transactions = JSON.parse(localStorage.getItem('my_budget_data'));
-                localStorage.removeItem('my_budget_data');
-                saveData();
-            }
-
             document.getElementById('setting-weekly-budget').value = settings.weeklyBudget || '';
+            document.getElementById('setting-initial-capital').value = settings.initialCapital || 0;
             refreshUI();
         };
 
@@ -307,48 +362,49 @@
         function refreshUI() {
             calculateTotal();
             if (currentTab === 'list') renderList();
-            if (currentTab === 'calendar') renderCalendar();
+            if (currentTab === 'calendar') {
+                renderCalendarStrip();
+                updateCalendarDetails(selectedCalendarDate);
+            }
         }
 
         // --- CALCULS ---
         function calculateTotal() {
-            // 1. Calculer le solde réel (transactions passées + aujourd'hui)
             const today = new Date();
             today.setHours(0,0,0,0);
             
-            let total = 0;
+            // On part du capital initial défini dans les réglages
+            let total = parseFloat(settings.initialCapital) || 0;
+
             transactions.forEach(t => {
                 let tDate = new Date(t.date);
                 tDate.setHours(0,0,0,0);
+                // On ajoute tout ce qui est passé ou aujourd'hui
                 if (tDate <= today) {
                     if (t.type === 'income') total += parseFloat(t.amount);
                     if (t.type === 'expense') total -= parseFloat(t.amount);
                 }
             });
 
-            // Affichage Header
-            document.getElementById('total-capital').innerText = total.toFixed(2) + ' €';
+            document.getElementById('total-capital').innerText = total.toFixed(2).replace('.', ',') + ' €';
             
-            // Indicateur budget auto
             const dailyBurn = (settings.weeklyBudget || 0) / 7;
             if (dailyBurn > 0) {
                 document.getElementById('auto-budget-indicator').innerText = `-${dailyBurn.toFixed(2)}€ / jour (Auto)`;
             } else {
                 document.getElementById('auto-budget-indicator').innerText = '';
             }
-            
             return total;
         }
 
         function getBalanceAtDate(targetDate) {
-            // Calcul prévisionnel à une date précise
-            let total = 0;
+            let total = parseFloat(settings.initialCapital) || 0;
             const start = new Date(); // Aujourd'hui
             start.setHours(0,0,0,0);
             const target = new Date(targetDate);
             target.setHours(0,0,0,0);
 
-            // Somme des transactions
+            // Transactions
             transactions.forEach(t => {
                 let tDate = new Date(t.date);
                 tDate.setHours(0,0,0,0);
@@ -358,7 +414,7 @@
                 }
             });
 
-            // Déduction du budget auto quotidien
+            // Budget Auto
             const dailyBurn = (settings.weeklyBudget || 0) / 7;
             if (dailyBurn > 0 && target > start) {
                 const diffTime = Math.abs(target - start);
@@ -369,46 +425,37 @@
             return total;
         }
 
-        // --- NAVIGATION ---
+        // --- NAVIGATION TABS ---
         function switchTab(tabName) {
             currentTab = tabName;
-            
-            // Cacher toutes les vues
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-
-            // Afficher la bonne
             document.getElementById('view-' + tabName).classList.add('active');
-            
-            // Highlight bouton
             const btnIndex = ['list', 'calendar', 'settings'].indexOf(tabName);
             document.querySelectorAll('.tab-btn')[btnIndex].classList.add('active');
 
-            // Cacher bouton + dans réglages et calendrier (optionnel)
             const fab = document.querySelector('.fab');
             if(tabName === 'settings') fab.style.display = 'none';
             else fab.style.display = 'flex';
 
             refreshUI();
+            
+            // Si on va sur calendrier, scroll vers aujourd'hui si besoin
+            if(tabName === 'calendar') {
+                setTimeout(scrollToSelectedDay, 100);
+            }
         }
 
-        // --- VUE LISTE ---
+        // --- LISTE ---
         function renderList() {
             const listContainer = document.getElementById('transaction-list');
             listContainer.innerHTML = '';
-            
-            // Tri décroissant
             const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            if (sorted.length === 0) {
-                listContainer.innerHTML = '<div style="text-align:center;color:#999;margin-top:50px">Rien pour l\'instant</div>';
-                return;
-            }
+            if (sorted.length === 0) listContainer.innerHTML = '<div style="text-align:center;color:#999;margin-top:50px">Aucune opération</div>';
 
             sorted.forEach((t) => {
-                // Retrouver l'index original pour l'édition
                 const originalIndex = transactions.indexOf(t);
-                
                 let amountHtml = '';
                 if(t.type !== 'event') {
                     const color = t.type === 'income' ? 'text-success' : 'text-danger';
@@ -420,7 +467,7 @@
                     <div class="transaction-card ${t.color || 'c-white'}" onclick="openModal(${originalIndex})">
                         <div class="t-info">
                             <div class="t-title">${t.title}</div>
-                            <div class="t-date">${new Date(t.date).toLocaleDateString('fr-FR')} ${t.desc ? '• '+t.desc : ''}</div>
+                            <div class="t-date">${new Date(t.date).toLocaleDateString('fr-FR')} ${t.desc?'• '+t.desc:''}</div>
                         </div>
                         ${amountHtml}
                     </div>
@@ -429,77 +476,189 @@
             });
         }
 
-        // --- VUE CALENDRIER ---
-        function changeZoom(val) {
-            document.documentElement.style.setProperty('--day-width', val + 'px');
-        }
+        // --- CALENDRIER (RUBAN) ---
+        function renderCalendarStrip() {
+            const strip = document.getElementById('calendar-strip');
+            if(strip.children.length > 0) return; // Évite de re-générer si déjà fait
 
-        function renderCalendar() {
-            const container = document.getElementById('calendar-scroller');
-            container.innerHTML = '';
-            
-            // Générer 30 jours (5 avant, 25 après)
             const today = new Date();
-            const startDate = new Date();
-            startDate.setDate(today.getDate() - 5);
+            today.setHours(0,0,0,0);
             
-            for (let i = 0; i < 35; i++) {
-                let currentDate = new Date(startDate);
-                currentDate.setDate(startDate.getDate() + i);
+            // Génère -30 jours à +90 jours
+            const startGen = new Date(today);
+            startGen.setDate(today.getDate() - 30);
+            
+            let html = '';
+            for(let i=0; i<120; i++) {
+                let curr = new Date(startGen);
+                curr.setDate(startGen.getDate() + i);
                 
-                const isToday = currentDate.toDateString() === today.toDateString();
-                const balance = getBalanceAtDate(currentDate);
+                const isToday = curr.getTime() === today.getTime();
+                const dayName = curr.toLocaleDateString('fr-FR', {weekday: 'short'});
+                const dayNum = curr.getDate();
+                const dateStr = curr.toISOString().split('T')[0];
 
-                // Trouver les dots (événements ce jour là)
-                let dotsHtml = '';
-                transactions.forEach(t => {
-                    let tDate = new Date(t.date);
-                    if (tDate.toDateString() === currentDate.toDateString()) {
-                        let dotColor = '#999';
-                        if (t.color && t.color.includes('red')) dotColor = 'red';
-                        if (t.color && t.color.includes('green')) dotColor = 'green';
-                        if (t.color && t.color.includes('blue')) dotColor = 'blue';
-                        dotsHtml += `<div class="cal-dot" style="background:${dotColor}"></div>`;
-                    }
-                });
-
-                const html = `
-                    <div class="cal-day ${isToday ? 'today' : ''}">
-                        <div class="cal-date">${currentDate.getDate()}/${currentDate.getMonth()+1}</div>
-                        <div style="flex-grow:1; display:flex; flex-wrap:wrap; align-content:start; justify-content:center;">
-                            ${dotsHtml}
-                        </div>
-                        <div class="cal-balance" style="color:${balance < 0 ? 'red' : 'black'}">
-                            ${Math.round(balance)}
-                        </div>
+                // Vérifie s'il y a un event
+                let hasEvent = transactions.some(t => t.date === dateStr);
+                
+                html += `
+                    <div class="cal-day-pill ${isToday ? 'today' : ''}" 
+                         id="day-${dateStr}" 
+                         onclick="selectDay('${dateStr}')">
+                        <span class="pill-day-name">${dayName}</span>
+                        <span class="pill-date-num">${dayNum}</span>
+                        <div class="pill-dot" style="display:${hasEvent ? 'block' : 'none'}"></div>
                     </div>
                 `;
-                container.innerHTML += html;
+            }
+            strip.innerHTML = html;
+        }
+
+        function selectDay(dateStr) {
+            selectedCalendarDate = new Date(dateStr);
+            selectedCalendarDate.setHours(0,0,0,0);
+            
+            // UI Selection
+            document.querySelectorAll('.cal-day-pill').forEach(el => el.classList.remove('selected'));
+            const el = document.getElementById('day-' + dateStr);
+            if(el) {
+                el.classList.add('selected');
+                el.scrollIntoView({behavior: "smooth", inline: "center"});
+            }
+
+            updateCalendarDetails(selectedCalendarDate);
+        }
+
+        function goToToday() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            selectDay(todayStr);
+        }
+
+        function scrollToSelectedDay() {
+            const dateStr = selectedCalendarDate.toISOString().split('T')[0];
+            const el = document.getElementById('day-' + dateStr);
+            if(el) el.scrollIntoView({behavior: "auto", inline: "center"});
+        }
+
+        function updateCalendarDetails(date) {
+            // Affichage Header
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('day-label-display').innerText = date.toLocaleDateString('fr-FR', options);
+            
+            // Solde
+            const bal = getBalanceAtDate(date);
+            const balEl = document.getElementById('day-balance-display');
+            balEl.innerText = bal.toFixed(2) + ' €';
+            balEl.style.color = bal < 0 ? 'red' : 'var(--primary)';
+
+            // Liste Events
+            const listEl = document.getElementById('day-events-list');
+            listEl.innerHTML = '';
+            const dateStr = date.toISOString().split('T')[0];
+            
+            const dayEvents = transactions.filter(t => t.date === dateStr);
+            
+            if(dayEvents.length === 0) {
+                listEl.innerHTML = '<div style="text-align:center; color:#ccc; margin-top:10px;">Rien ce jour-là</div>';
+            } else {
+                dayEvents.forEach(t => {
+                     // On réutilise le style de carte simplifié
+                    let amountStr = t.type === 'event' ? '' : parseFloat(t.amount).toFixed(2) + ' €';
+                    let colorSide = t.color ? t.color : 'c-white';
+                    
+                    listEl.innerHTML += `
+                        <div class="transaction-card ${colorSide}" style="padding:10px; margin-bottom:5px;">
+                            <div class="t-title" style="font-size:14px;">${t.title}</div>
+                            <div class="t-amount" style="font-size:14px;">${amountStr}</div>
+                        </div>
+                    `;
+                });
             }
         }
 
-        // --- FORMULAIRE & ACTIONS ---
-        const modal = document.getElementById('modal');
+        // --- SIMULATEUR ---
+        function runSimulation() {
+            const dateInput = document.getElementById('sim-date').value;
+            if(!dateInput) return alert("Choisis une date !");
+
+            const target = new Date(dateInput);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            if(target <= today) return alert("Choisis une date future !");
+
+            const currentBal = calculateTotal();
+            const futureBal = getBalanceAtDate(target);
+            const diff = futureBal - currentBal;
+
+            document.getElementById('sim-balance').innerText = futureBal.toFixed(2) + ' €';
+            
+            const diffEl = document.getElementById('sim-diff');
+            if(diff >= 0) {
+                diffEl.innerText = `(+${diff.toFixed(2)} € par rapport à auj.)`;
+                diffEl.style.color = 'green';
+            } else {
+                diffEl.innerText = `(${diff.toFixed(2)} € par rapport à auj.)`;
+                diffEl.style.color = 'red';
+            }
+
+            // Liste des mouvements entre les deux dates
+            const listContainer = document.getElementById('sim-list');
+            listContainer.innerHTML = '<b>Mouvements prévus :</b><br>';
+            
+            const events = transactions.filter(t => {
+                const d = new Date(t.date);
+                return d > today && d <= target;
+            }).sort((a,b) => new Date(a.date) - new Date(b.date));
+
+            if(events.length === 0) listContainer.innerHTML += "Aucun événement spécifique.";
+
+            events.forEach(t => {
+                if(t.type !== 'event') {
+                    const sign = t.type === 'income' ? '+' : '-';
+                    listContainer.innerHTML += `<div>${new Date(t.date).toLocaleDateString('fr-FR').slice(0,5)} : ${t.title} (${sign}${t.amount}€)</div>`;
+                }
+            });
+
+            // Budget auto impact
+            const dailyBurn = (settings.weeklyBudget || 0) / 7;
+            if (dailyBurn > 0) {
+                 const diffTime = Math.abs(target - today);
+                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                 const totalBurn = diffDays * dailyBurn;
+                 listContainer.innerHTML += `<div style="color:#8E8E93; margin-top:5px;">- Budget Auto (${diffDays}j) : -${totalBurn.toFixed(2)}€</div>`;
+            }
+
+            document.getElementById('sim-result').style.display = 'block';
+        }
+
+
+        // --- REGLAGES ---
+        function saveSettings() {
+            settings.initialCapital = parseFloat(document.getElementById('setting-initial-capital').value) || 0;
+            settings.weeklyBudget = parseFloat(document.getElementById('setting-weekly-budget').value) || 0;
+            saveData();
+            refreshUI();
+            // Feedback visuel
+            // alert("Réglages sauvegardés");
+        }
         
+        // --- MODAL & FORMULAIRE (Code identique V3) ---
+        const modal = document.getElementById('modal');
         function selectColor(colorClass) {
             document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
             document.querySelector('.' + colorClass).classList.add('selected');
             document.getElementById('selected-color').value = colorClass;
         }
-
         function toggleAmount() {
             const type = document.getElementById('input-type').value;
             const amtInput = document.getElementById('input-amount');
-            if (type === 'event') amtInput.style.display = 'none';
-            else amtInput.style.display = 'block';
+            if (type === 'event') amtInput.style.display = 'none'; else amtInput.style.display = 'block';
         }
-
         function openModal(index = -1) {
             modal.style.display = 'flex';
             document.getElementById('edit-index').value = index;
-            
             if (index > -1) {
-                // Mode Modification
                 const t = transactions[index];
                 document.getElementById('modal-title').innerText = "Modifier";
                 document.getElementById('input-title').value = t.title;
@@ -510,7 +669,6 @@
                 selectColor(t.color || 'c-white');
                 document.getElementById('btn-delete').style.display = 'block';
             } else {
-                // Mode Création
                 document.getElementById('modal-title').innerText = "Nouvel Événement";
                 document.getElementById('input-title').value = '';
                 document.getElementById('input-amount').value = '';
@@ -521,11 +679,8 @@
             }
             toggleAmount();
         }
-
-        function closeModal() {
-            modal.style.display = 'none';
-        }
-
+        function closeModal() { modal.style.display = 'none'; }
+        
         function saveTransaction() {
             const index = parseInt(document.getElementById('edit-index').value);
             const title = document.getElementById('input-title').value;
@@ -536,14 +691,10 @@
             const color = document.getElementById('selected-color').value;
 
             if (!title || !date) return alert("Titre et Date obligatoires");
-
             const item = { title, type, amount: (type==='event'?0:amount), date, desc, color };
 
-            if (index > -1) {
-                transactions[index] = item;
-            } else {
-                transactions.push(item);
-            }
+            if (index > -1) transactions[index] = item;
+            else transactions.push(item);
             
             saveData();
             closeModal();
@@ -560,38 +711,9 @@
             }
         }
 
-        // --- SETTINGS ---
-        function saveSettings() {
-            const val = document.getElementById('setting-weekly-budget').value;
-            settings.weeklyBudget = parseFloat(val);
-            saveData();
-            refreshUI();
-        }
-        
-        function resetApp() {
-            if(confirm("ATTENTION: Tout effacer ?")) {
-                localStorage.clear();
-                location.reload();
-            }
-        }
-
-        function exportData() {
-            const data = JSON.stringify({t: transactions, s: settings});
-            prompt("Copie ce texte et garde-le en sécurité :", data);
-        }
-
-        function importData() {
-            const data = prompt("Colle le texte de sauvegarde ici :");
-            if (data) {
-                try {
-                    const parsed = JSON.parse(data);
-                    if (parsed.t) transactions = parsed.t;
-                    if (parsed.s) settings = parsed.s;
-                    saveData();
-                    location.reload();
-                } catch(e) { alert("Erreur de format"); }
-            }
-        }
+        function resetApp() { if(confirm("ATTENTION: Tout effacer ?")) { localStorage.clear(); location.reload(); } }
+        function exportData() { const data = JSON.stringify({t: transactions, s: settings}); prompt("Copie ce texte :", data); }
+        function importData() { const data = prompt("Colle le texte :"); if (data) { try { const parsed = JSON.parse(data); if (parsed.t) transactions = parsed.t; if (parsed.s) settings = parsed.s; saveData(); location.reload(); } catch(e) { alert("Erreur"); } } }
 
     </script>
 </body>
