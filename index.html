@@ -5,153 +5,333 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Mon Trésor</title>
+    <title>Mon Trésor V2</title>
     
     <style>
-        /* --- DESIGN DE BASE (STYLE iOS) --- */
         :root {
-            --primary-color: #007AFF; /* Bleu iOS */
-            --bg-color: #F2F2F7;    /* Gris clair iOS */
-            --card-bg: #FFFFFF;
-            --text-color: #000000;
-            --success-color: #34C759; /* Vert */
-            --danger-color: #FF3B30;  /* Rouge */
+            --primary: #007AFF;
+            --bg: #F2F2F7;
+            --card: #FFFFFF;
+            --text: #000000;
+            --green: #34C759;
+            --red: #FF3B30;
+            --gray: #8E8E93;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
             margin: 0;
             padding: 0;
-            /* Empêcher le rebond élastique sur iOS */
-            overscroll-behavior-y: none; 
-            padding-bottom: 80px; /* Espace pour le menu du bas */
+            padding-bottom: 100px; /* Place pour le bouton + */
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* En-tête (Capital Total) */
+        /* --- HEADER --- */
         header {
-            background-color: var(--card-bg);
+            background-color: var(--card);
             padding: 20px;
-            padding-top: 60px; /* Espace pour la barre d'état iPhone */
+            padding-top: 60px;
             text-align: center;
             border-bottom: 1px solid #d1d1d6;
             position: sticky;
             top: 0;
+            z-index: 10;
+        }
+
+        h1 { font-size: 14px; text-transform: uppercase; color: var(--gray); margin: 0; }
+        #total-capital { font-size: 36px; font-weight: 700; margin: 5px 0; }
+
+        /* --- LISTE DES ÉVÉNEMENTS --- */
+        .container { padding: 20px; }
+        
+        .transaction-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .t-info { flex-grow: 1; }
+        .t-title { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+        .t-date { font-size: 12px; color: var(--gray); }
+        .t-amount { font-weight: 700; font-size: 16px; }
+        .income { color: var(--green); }
+        .expense { color: var(--red); }
+        .neutral { color: var(--gray); }
+
+        /* --- BOUTON FLOTTANT (+) --- */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 20px;
+            background-color: var(--primary);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            box-shadow: 0 4px 12px rgba(0,122,255,0.4);
+            border: none;
+            cursor: pointer;
             z-index: 100;
         }
 
-        h1 {
-            font-size: 14px;
-            text-transform: uppercase;
-            color: #8E8E93;
-            margin: 0;
-            font-weight: 600;
-        }
-
-        #total-capital {
-            font-size: 36px;
-            font-weight: 700;
-            margin: 5px 0;
-        }
-
-        /* Conteneur principal */
-        .container {
-            padding: 20px;
-        }
-
-        /* Carte d'information (Exemple) */
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .card-title {
-            font-weight: 600;
-            margin-bottom: 5px;
-            font-size: 17px;
-        }
-
-        .card-desc {
-            font-size: 14px;
-            color: #666;
-        }
-
-        /* Menu de navigation en bas */
-        .tab-bar {
+        /* --- MODAL (FORMULAIRE) --- */
+        .modal-overlay {
+            display: none;
             position: fixed;
-            bottom: 0;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: flex-end; /* Affiche en bas comme sur iOS */
+        }
+
+        .modal-content {
+            background: var(--bg);
             width: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px); /* Effet flou iOS */
-            border-top: 1px solid #d1d1d6;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0 25px 0; /* Extra padding pour iPhone X/11/12/etc */
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            padding: 20px;
+            box-sizing: border-box;
+            animation: slideUp 0.3s ease-out;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
-        .tab-btn {
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; color: var(--gray); }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d1d6;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+        
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border-radius: 12px;
             border: none;
-            background: none;
-            color: #8E8E93;
-            font-size: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-weight: 500;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
         }
+        
+        .btn-cancel { background: #E5E5EA; color: var(--text); }
+        .btn-save { background: var(--primary); color: white; }
 
-        .tab-btn.active {
-            color: var(--primary-color);
-        }
-
-        .tab-icon {
-            font-size: 24px;
-            margin-bottom: 2px;
-        }
+        /* Gestion de la visibilité du montant */
+        .hidden { display: none; }
 
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Capital Total</h1>
+        <h1>Solde Actuel</h1>
         <div id="total-capital">0,00 €</div>
     </header>
 
-    <div class="container" id="app-content">
-        <div class="card">
-            <div class="card-title">Bienvenue ! 👋</div>
-            <div class="card-desc">Ceci est la version 1.0 de ton application. La structure est en place.</div>
-        </div>
-        
-        <div class="card">
-            <div class="card-title">En attente des données...</div>
-            <div class="card-desc">Nous allons bientôt programmer la logique pour ajouter tes revenus et dépenses ici.</div>
+    <div class="container" id="transaction-list">
+        <div style="text-align:center; color: #8E8E93; margin-top: 50px;">
+            Aucun événement.<br>Appuie sur + pour commencer.
         </div>
     </div>
 
-    <nav class="tab-bar">
-        <button class="tab-btn active">
-            <span class="tab-icon">📅</span>
-            Calendrier
-        </button>
-        <button class="tab-btn">
-            <span class="tab-icon">☰</span>
-            Liste
-        </button>
-        <button class="tab-btn">
-            <span class="tab-icon">⚙️</span>
-            Réglages
-        </button>
-    </nav>
+    <button class="fab" onclick="openModal()">+</button>
+
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <h2 style="margin-top:0">Nouvel Événement</h2>
+            
+            <div class="form-group">
+                <label>Titre (Ex: Loyer, Salaire...)</label>
+                <input type="text" id="input-title" placeholder="Quoi ?">
+            </div>
+
+            <div class="form-group">
+                <label>Type</label>
+                <select id="input-type" onchange="toggleAmount()">
+                    <option value="expense">📉 Dépense</option>
+                    <option value="income">📈 Revenu</option>
+                    <option value="event">📅 Juste un événement (Note)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="group-amount">
+                <label>Montant (€)</label>
+                <input type="number" id="input-amount" placeholder="0.00" inputmode="decimal">
+            </div>
+
+            <div class="form-group">
+                <label>Date de début</label>
+                <input type="date" id="input-date">
+            </div>
+            
+            <div class="form-group">
+                <label>Notes (Optionnel)</label>
+                <textarea id="input-desc" rows="3" placeholder="Détails..."></textarea>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-cancel" onclick="closeModal()">Annuler</button>
+                <button class="btn btn-save" onclick="saveTransaction()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // C'est ici que nous mettrons l'intelligence de l'application
-        console.log("Application démarrée");
+        // --- 1. GESTION DES DONNÉES ---
+        let transactions = JSON.parse(localStorage.getItem('my_budget_data')) || [];
+
+        // Initialisation au chargement
+        window.onload = function() {
+            renderList();
+            updateTotal();
+            // Mettre la date d'aujourd'hui par défaut dans le formulaire
+            document.getElementById('input-date').valueAsDate = new Date();
+        };
+
+        // Sauvegarder dans le téléphone
+        function saveToLocal() {
+            localStorage.setItem('my_budget_data', JSON.stringify(transactions));
+            renderList();
+            updateTotal();
+        }
+
+        // --- 2. AFFICHAGE (UI) ---
+        function renderList() {
+            const listContainer = document.getElementById('transaction-list');
+            listContainer.innerHTML = '';
+
+            // Trier par date (plus récent en haut)
+            transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (transactions.length === 0) {
+                listContainer.innerHTML = '<div style="text-align:center; color: #8E8E93; margin-top: 50px;">Aucun événement.<br>Appuie sur + pour commencer.</div>';
+                return;
+            }
+
+            transactions.forEach((t, index) => {
+                let amountHtml = '';
+                let colorClass = 'neutral';
+                let sign = '';
+
+                if (t.type === 'expense') {
+                    colorClass = 'expense';
+                    sign = '- ';
+                    amountHtml = `<div class="t-amount ${colorClass}">${sign}${parseFloat(t.amount).toFixed(2)} €</div>`;
+                } else if (t.type === 'income') {
+                    colorClass = 'income';
+                    sign = '+ ';
+                    amountHtml = `<div class="t-amount ${colorClass}">${sign}${parseFloat(t.amount).toFixed(2)} €</div>`;
+                } else {
+                    amountHtml = `<div class="t-amount neutral">Event</div>`;
+                }
+
+                const html = `
+                    <div class="transaction-card">
+                        <div class="t-info">
+                            <div class="t-title">${t.title}</div>
+                            <div class="t-date">${new Date(t.date).toLocaleDateString('fr-FR')} ${t.desc ? '• ' + t.desc : ''}</div>
+                        </div>
+                        ${amountHtml}
+                        <button onclick="deleteItem(${index})" style="background:none; border:none; color:#ccc; margin-left:10px;">✕</button>
+                    </div>
+                `;
+                listContainer.innerHTML += html;
+            });
+        }
+
+        function updateTotal() {
+            let total = 0;
+            transactions.forEach(t => {
+                if (t.type === 'income') total += parseFloat(t.amount);
+                if (t.type === 'expense') total -= parseFloat(t.amount);
+            });
+            document.getElementById('total-capital').innerText = total.toFixed(2).replace('.', ',') + ' €';
+        }
+
+        // --- 3. INTERACTIONS FORMULAIRE ---
+        const modal = document.getElementById('modal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+            document.getElementById('input-title').focus();
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+            // Vider les champs
+            document.getElementById('input-title').value = '';
+            document.getElementById('input-amount').value = '';
+            document.getElementById('input-desc').value = '';
+            document.getElementById('input-type').value = 'expense';
+            toggleAmount();
+        }
+
+        function toggleAmount() {
+            const type = document.getElementById('input-type').value;
+            const amountGroup = document.getElementById('group-amount');
+            if (type === 'event') {
+                amountGroup.classList.add('hidden');
+            } else {
+                amountGroup.classList.remove('hidden');
+            }
+        }
+
+        function saveTransaction() {
+            const title = document.getElementById('input-title').value;
+            const type = document.getElementById('input-type').value;
+            const amount = document.getElementById('input-amount').value;
+            const date = document.getElementById('input-date').value;
+            const desc = document.getElementById('input-desc').value;
+
+            // Vérifications basiques
+            if (!title) { alert("Il faut un titre !"); return; }
+            if (type !== 'event' && !amount) { alert("Il faut un montant !"); return; }
+            if (!date) { alert("Il faut une date !"); return; }
+
+            const newItem = {
+                title: title,
+                type: type,
+                amount: type === 'event' ? 0 : amount,
+                date: date,
+                desc: desc
+            };
+
+            transactions.push(newItem);
+            saveToLocal();
+            closeModal();
+        }
+
+        function deleteItem(index) {
+            if(confirm('Supprimer cet élément ?')) {
+                transactions.splice(index, 1); // Retire l'élément du tableau
+                saveToLocal(); // Sauvegarde le nouveau tableau
+            }
+        }
     </script>
 </body>
 </html>
