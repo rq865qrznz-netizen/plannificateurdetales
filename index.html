@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Mon Trésor</title>
+    
+    <style>
+        /* --- DESIGN DE BASE (STYLE iOS) --- */
+        :root {
+            --primary-color: #007AFF; /* Bleu iOS */
+            --bg-color: #F2F2F7;    /* Gris clair iOS */
+            --card-bg: #FFFFFF;
+            --text-color: #000000;
+            --success-color: #34C759; /* Vert */
+            --danger-color: #FF3B30;  /* Rouge */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            /* Empêcher le rebond élastique sur iOS */
+            overscroll-behavior-y: none; 
+            padding-bottom: 80px; /* Espace pour le menu du bas */
+        }
+
+        /* En-tête (Capital Total) */
+        header {
+            background-color: var(--card-bg);
+            padding: 20px;
+            padding-top: 60px; /* Espace pour la barre d'état iPhone */
+            text-align: center;
+            border-bottom: 1px solid #d1d1d6;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        h1 {
+            font-size: 14px;
+            text-transform: uppercase;
+            color: #8E8E93;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        #total-capital {
+            font-size: 36px;
+            font-weight: 700;
+            margin: 5px 0;
+        }
+
+        /* Conteneur principal */
+        .container {
+            padding: 20px;
+        }
+
+        /* Carte d'information (Exemple) */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 17px;
+        }
+
+        .card-desc {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Menu de navigation en bas */
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px); /* Effet flou iOS */
+            border-top: 1px solid #d1d1d6;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0 25px 0; /* Extra padding pour iPhone X/11/12/etc */
+        }
+
+        .tab-btn {
+            border: none;
+            background: none;
+            color: #8E8E93;
+            font-size: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: 500;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+        }
+
+        .tab-icon {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Capital Total</h1>
+        <div id="total-capital">0,00 €</div>
+    </header>
+
+    <div class="container" id="app-content">
+        <div class="card">
+            <div class="card-title">Bienvenue ! 👋</div>
+            <div class="card-desc">Ceci est la version 1.0 de ton application. La structure est en place.</div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">En attente des données...</div>
+            <div class="card-desc">Nous allons bientôt programmer la logique pour ajouter tes revenus et dépenses ici.</div>
+        </div>
+    </div>
+
+    <nav class="tab-bar">
+        <button class="tab-btn active">
+            <span class="tab-icon">📅</span>
+            Calendrier
+        </button>
+        <button class="tab-btn">
+            <span class="tab-icon">☰</span>
+            Liste
+        </button>
+        <button class="tab-btn">
+            <span class="tab-icon">⚙️</span>
+            Réglages
+        </button>
+    </nav>
+
+    <script>
+        // C'est ici que nous mettrons l'intelligence de l'application
+        console.log("Application démarrée");
+    </script>
+</body>
+</html>
