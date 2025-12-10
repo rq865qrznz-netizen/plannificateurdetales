@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Mon Trésor V8</title>
+    <title>Mon Trésor V9</title>
     
     <style>
         /* --- VARIABLES --- */
@@ -16,13 +16,13 @@
             --text: #000000;
             --gray: #8E8E93;
             --separator: #C6C6C8;
-            --cal-bg: #F2F2F7;
+            --cal-bg: #FFFFFF;
             --cal-col-border: #E5E5EA;
-            --cal-weekend: #EBEBF0;
+            --cal-weekend: #FAFAFC;
             
             /* DYNAMIQUE */
-            --visible-days: 7; /* Défini par le JS */
-            --col-font-size: 18px; /* Taille jour */
+            --visible-days: 7; 
+            --col-font-size: 16px; 
         }
 
         body.dark {
@@ -31,8 +31,8 @@
             --text: #FFFFFF;
             --gray: #98989D;
             --separator: #38383A;
-            --cal-bg: #000000;
-            --cal-col-border: #38383A;
+            --cal-bg: #1c1c1e;
+            --cal-col-border: #2c2c2e;
             --cal-weekend: #151516;
         }
 
@@ -44,7 +44,6 @@
             height: 100vh;
             overflow: hidden;
             -webkit-tap-highlight-color: transparent;
-            transition: background-color 0.3s, color 0.3s;
         }
 
         /* --- HEADER --- */
@@ -87,7 +86,7 @@
         .t-date { font-size: 12px; color: var(--gray); margin-top: 3px;}
         .t-amount { font-weight: 700; font-size: 16px; }
 
-        /* --- CALENDRIER (GRID/FLEX) --- */
+        /* --- CALENDRIER REVISITÉ --- */
         #cal-controls-bar {
             position: absolute; top: 50px; left: 0; right: 0; height: 40px;
             display: flex; justify-content: center; align-items: center;
@@ -101,7 +100,7 @@
         }
 
         #cal-container {
-            margin-top: 40px; /* Place pour le selecteur */
+            margin-top: 40px; /* Espace selecteur */
             display: flex; height: calc(100% - 40px); overflow-x: auto; position: relative;
             background: var(--cal-bg);
             scroll-snap-type: x mandatory;
@@ -122,97 +121,118 @@
             text-align: center; padding: 10px 0;
             border-bottom: 1px solid var(--cal-col-border);
             color: var(--gray); height: 50px; box-sizing: border-box;
-            overflow: hidden;
+            overflow: hidden; flex-shrink: 0;
         }
         .cal-day-name { font-size: 9px; text-transform: uppercase; display: block; }
-        .cal-day-num { font-size: var(--col-font-size); font-weight: 600; color: var(--text); transition: font-size 0.2s; }
+        .cal-day-num { font-size: var(--col-font-size); font-weight: 600; color: var(--text); }
         .today .cal-day-num { color: var(--primary); }
 
-        /* Events Layer */
-        #cal-events-layer {
-            position: absolute; top: 50px; left: 0; bottom: 0; display: flex;
+        /* Zone Contenu des jours (Flex vertical pour expansion) */
+        .cal-day-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 2px;
+            padding-top: 30px; /* Espace réservé pour les investissements (Barres du haut) */
+            gap: 4px;
+            overflow-y: hidden; /* Evite scroll interne moche */
+            position: relative;
         }
-        .event-block {
-            position: absolute; height: 36px; border-radius: 6px;
-            padding: 4px 4px; box-sizing: border-box; font-size: 10px;
-            overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-            display: flex; flex-direction: column; justify-content: center;
-            border-left-width: 4px; border-left-style: solid;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        .event-title { font-weight: 700; color: var(--text); }
-        .event-amt { opacity: 0.8; font-size: 9px; color: var(--text); }
-        
-        /* Ajustement taille texte event en vue mois */
-        body.view-month .event-title { font-size: 9px; }
-        body.view-month .event-amt { display: none; }
 
-        .col-balance {
-            position: absolute; bottom: 10px; left: 0; right: 0;
-            text-align: center; font-size: 10px; font-weight: 600; color: var(--gray);
-            pointer-events: none;
+        /* --- ÉVÉNEMENTS STANDARDS (DANS LA COLONNE) --- */
+        .std-event-card {
+            background: var(--card);
+            border-radius: 4px;
+            padding: 5px;
+            width: 100%;
+            box-sizing: border-box;
+            border-left: 3px solid transparent;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            overflow: hidden;
+            flex: 1; /* S'étend verticalement */
+            max-height: 100px; /* Limite pour ne pas être géant si seul */
+            min-height: 30px;
         }
+        .std-event-title { font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .std-event-amt { opacity: 0.8; font-size: 10px; }
+
+        /* --- ÉVÉNEMENTS INVESTISSEMENTS (OVERLAY ABSOLU) --- */
+        #cal-invest-layer {
+            position: absolute; top: 50px; left: 0; bottom: 0; display: flex; pointer-events: none;
+        }
+        
+        /* La barre continue */
+        .invest-bar {
+            position: absolute; height: 24px; 
+            box-sizing: border-box; font-size: 10px;
+            overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+            display: flex; align-items: center; padding-left: 5px;
+            pointer-events: auto; /* Clickable */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            color: var(--text);
+            /* Pas de border-radius sur les côtés pour effet continu */
+            opacity: 0.9;
+        }
+        
+        .col-balance {
+            padding: 5px 0;
+            text-align: center; font-size: 10px; font-weight: 600; color: var(--gray);
+            border-top: 1px solid var(--cal-col-border);
+            margin-top: auto; /* Colle au bas */
+            background: var(--cal-bg);
+        }
+
+        /* --- COULEURS PASTELS --- */
+        .c-white  { background: #E5E5EA; border-left-color: #8E8E93 !important; }
+        .c-red    { background: #FFD1D1; border-left-color: #FF3B30 !important; }
+        .c-green  { background: #D1FFD6; border-left-color: #34C759 !important; }
+        .c-blue   { background: #D1E9FF; border-left-color: #007AFF !important; }
+        .c-yellow { background: #FFF5CC; border-left-color: #FFCC00 !important; }
+        .c-orange { background: #FFE0B2; border-left-color: #FF9500 !important; }
+        .c-purple { background: #EAD1FF; border-left-color: #AF52DE !important; }
+        
+        /* Dark Mode Adjustments for Pastels */
+        body.dark .c-white { background: #3a3a3c; }
+        body.dark .c-red   { background: #4a1818; }
+        body.dark .c-green { background: #14351a; }
+        body.dark .c-blue  { background: #11263d; }
+        body.dark .c-yellow{ background: #42380e; }
+        body.dark .c-orange{ background: #4d2f00; }
+        body.dark .c-purple{ background: #321645; }
+
 
         /* --- RÉGLAGES --- */
-        .simulator-box {
-            background: var(--card); margin: 0 20px 20px 20px;
-            border-radius: 12px; padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .week-stats-container {
-            margin-top: 15px; border-top: 1px solid var(--separator); padding-top: 10px;
-        }
-        .week-row {
-            display: flex; justify-content: space-between; font-size: 13px; 
-            padding: 8px 0; border-bottom: 1px solid var(--separator);
-        }
+        .simulator-box { background: var(--card); margin: 0 20px 20px 20px; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .week-stats-container { margin-top: 15px; border-top: 1px solid var(--separator); padding-top: 10px; }
+        .week-row { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--separator); }
         .week-row:last-child { border-bottom: none; }
-
         .settings-group { background: var(--card); border-radius: 12px; padding: 15px; margin: 0 20px 20px 20px; }
         .settings-title { font-size: 13px; color: var(--gray); text-transform: uppercase; margin: 0 0 8px 30px; font-weight: 600;}
         .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 
-        /* --- COULEURS PASTELS --- */
         .color-selector { display: flex; gap: 10px; overflow-x: auto; padding: 5px; }
         .color-option { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; flex-shrink: 0; }
         .color-option.selected { border-color: var(--text); transform: scale(1.1); }
-        .c-white  { background: rgba(142, 142, 147, 0.15); border-left-color: #8E8E93 !important; }
-        .c-red    { background: rgba(255, 59, 48, 0.15);   border-left-color: #FF3B30 !important; }
-        .c-green  { background: rgba(52, 199, 89, 0.15);   border-left-color: #34C759 !important; }
-        .c-blue   { background: rgba(0, 122, 255, 0.15);   border-left-color: #007AFF !important; }
-        .c-yellow { background: rgba(255, 204, 0, 0.15);   border-left-color: #FFCC00 !important; }
-        .c-orange { background: rgba(255, 149, 0, 0.15);   border-left-color: #FF9500 !important; }
-        .c-purple { background: rgba(175, 82, 222, 0.15);  border-left-color: #AF52DE !important; }
+        .c-white-opt  { background: #ddd; }
+        .c-red-opt    { background: #ffcccb; }
+        .c-green-opt  { background: #90ee90; }
+        .c-blue-opt   { background: #add8e6; }
+        .c-orange-opt { background: #ffcc99; }
+        .c-purple-opt { background: #e0b0ff; }
 
-        /* --- TAB BAR & FAB --- */
-        .tab-bar {
-            position: fixed; bottom: 0; width: 100%;
-            background: var(--card);
-            border-top: 1px solid var(--separator);
-            display: flex; justify-content: space-around; padding: 10px 0 30px 0; z-index: 100;
-        }
+        .tab-bar { position: fixed; bottom: 0; width: 100%; background: var(--card); border-top: 1px solid var(--separator); display: flex; justify-content: space-around; padding: 10px 0 30px 0; z-index: 100; }
         .tab-btn { border: none; background: none; color: var(--gray); font-size: 10px; display: flex; flex-direction: column; align-items: center; }
         .tab-btn.active { color: var(--primary); }
         .tab-icon { font-size: 22px; margin-bottom: 2px; }
-
-        .fab {
-            position: fixed; bottom: 100px; right: 20px;
-            background: var(--primary); color: white;
-            width: 56px; height: 56px; border-radius: 28px;
-            font-size: 28px; border: none; box-shadow: 0 4px 12px rgba(0,122,255,0.4);
-            z-index: 90; display: flex; justify-content: center; align-items: center;
-        }
-
-        /* --- MODAL --- */
-        .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4); z-index: 200; align-items: flex-end;
-        }
-        .modal-content {
-            background: var(--bg); width: 100%; border-radius: 20px 20px 0 0;
-            padding: 20px; box-sizing: border-box; max-height: 90vh; overflow-y: auto;
-            animation: slideUp 0.3s;
-        }
+        .fab { position: fixed; bottom: 100px; right: 20px; background: var(--primary); color: white; width: 56px; height: 56px; border-radius: 28px; font-size: 28px; border: none; box-shadow: 0 4px 12px rgba(0,122,255,0.4); z-index: 90; display: flex; justify-content: center; align-items: center; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 200; align-items: flex-end; }
+        .modal-content { background: var(--bg); width: 100%; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; max-height: 90vh; overflow-y: auto; animation: slideUp 0.3s; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         input, select, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--separator); border-radius: 10px; font-size: 16px; box-sizing: border-box; font-family: inherit; background: var(--card); color: var(--text); }
         
@@ -231,7 +251,6 @@
     </div>
 
     <div id="view-calendar" class="view-section">
-        
         <div id="cal-controls-bar">
             <select id="view-selector" onchange="changeCalendarView(this.value)">
                 <option value="7">Vue Semaine (7j)</option>
@@ -239,50 +258,37 @@
                 <option value="30">Vue Mois (30j)</option>
             </select>
         </div>
-
         <div id="cal-container">
-            <div id="cal-events-layer"></div>
+            <div id="cal-invest-layer"></div>
         </div>
     </div>
 
     <div id="view-settings" class="view-section">
-        
         <div class="simulator-box">
             <h3 style="margin-top:0; font-size:14px; text-transform:uppercase; color:var(--gray);">Visionneuse Temporelle</h3>
             <div style="display:flex; gap:10px; justify-content:center; margin-bottom:15px;">
                 <input type="date" id="sim-date" style="margin-bottom:0; width:auto;">
                 <button onclick="runSimulation()" style="background:var(--primary); color:white; border:none; border-radius:10px; padding:0 20px; font-weight:bold;">VOIR</button>
             </div>
-            
             <div id="sim-result" style="display:none; text-align:center;">
                 <div style="font-size:12px; color:var(--gray);">Solde prévu</div>
                 <div id="sim-balance" style="font-size:28px; font-weight:800; margin:5px 0;"></div>
                 <div id="sim-diff" style="font-size:13px; font-weight:600; margin-bottom:15px;"></div>
             </div>
-
-            <h3 style="margin:20px 0 10px 0; font-size:12px; text-transform:uppercase; color:var(--gray); border-top:1px solid var(--separator); padding-top:15px;">
-                Dépenses Hebdomadaires
-            </h3>
+            <h3 style="margin:20px 0 10px 0; font-size:12px; text-transform:uppercase; color:var(--gray); border-top:1px solid var(--separator); padding-top:15px;">Dépenses Hebdomadaires</h3>
             <div id="weekly-stats" class="week-stats-container"></div>
         </div>
 
         <div class="settings-title">Comptabilité</div>
         <div class="settings-group">
-            
-            <div class="setting-row">
-                <label>Ajustement manuel du solde</label>
-            </div>
+            <div class="setting-row"><label>Ajustement manuel du solde</label></div>
             <div style="display:flex; gap:10px; margin-bottom:15px;">
                 <input type="number" id="input-adjustment" placeholder="+/- Montant" style="margin-bottom:0;">
                 <button onclick="applyAdjustment()" style="background:var(--bg); border:1px solid var(--separator); color:var(--text); border-radius:8px; padding:0 15px; white-space:nowrap;">Valider</button>
             </div>
-
             <div class="setting-row" style="border-top:1px solid var(--separator); padding-top:15px; margin-top:10px;">
                 <label>Budget Hebdo Auto (€)</label>
             </div>
-            <p style="font-size:11px; color:var(--gray); margin-top:-5px; margin-bottom:10px;">
-                Modifie les projections futures sans impacter le passé.
-            </p>
             <div style="display:flex; gap:10px;">
                 <input type="number" id="input-new-budget" placeholder="Nouveau montant" style="margin-bottom:0;">
                 <button onclick="updateBudget()" style="background:var(--primary); color:white; border:none; border-radius:8px; padding:0 15px; white-space:nowrap;">Valider</button>
@@ -297,7 +303,6 @@
                 <input type="checkbox" id="toggle-dark" onchange="toggleTheme()" style="width:auto; margin:0;">
             </div>
         </div>
-
         <div class="settings-title">Données</div>
         <div class="settings-group">
             <button onclick="exportData()" style="width:100%; padding:10px; margin-bottom:5px; background:var(--bg); border:1px solid var(--separator); border-radius:8px; color:var(--text);">Sauvegarder</button>
@@ -307,27 +312,17 @@
     </div>
 
     <button class="fab" onclick="openModal()">+</button>
-
     <nav class="tab-bar">
-        <button class="tab-btn active" onclick="switchTab('list')">
-            <span class="tab-icon">☰</span> Liste
-        </button>
-        <button class="tab-btn" onclick="switchTab('calendar')">
-            <span class="tab-icon">📅</span> Calendrier
-        </button>
-        <button class="tab-btn" onclick="switchTab('settings')">
-            <span class="tab-icon">⚙️</span> Réglages
-        </button>
+        <button class="tab-btn active" onclick="switchTab('list')"><span class="tab-icon">☰</span> Liste</button>
+        <button class="tab-btn" onclick="switchTab('calendar')"><span class="tab-icon">📅</span> Calendrier</button>
+        <button class="tab-btn" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span> Réglages</button>
     </nav>
 
     <div class="modal-overlay" id="modal">
         <div class="modal-content">
             <h2 id="modal-title" style="margin-top:0">Nouvel Événement</h2>
             <input type="hidden" id="edit-index" value="-1">
-
-            <label>Titre</label>
-            <input type="text" id="input-title" placeholder="Titre...">
-
+            <label>Titre</label><input type="text" id="input-title" placeholder="Titre...">
             <label>Type</label>
             <select id="input-type" onchange="handleTypeChange()">
                 <option value="expense">📉 Dépense</option>
@@ -335,34 +330,21 @@
                 <option value="invest">⏳ Investissement (Bloqué)</option>
                 <option value="event">📝 Note</option>
             </select>
-
             <label>Couleur</label>
             <div class="color-selector" id="color-picker">
-                <div class="color-option c-white selected" onclick="selectColor('c-white')" style="background:#ddd;"></div>
-                <div class="color-option c-red" onclick="selectColor('c-red')" style="background:#ffcccb;"></div>
-                <div class="color-option c-green" onclick="selectColor('c-green')" style="background:#90ee90;"></div>
-                <div class="color-option c-blue" onclick="selectColor('c-blue')" style="background:#add8e6;"></div>
-                <div class="color-option c-orange" onclick="selectColor('c-orange')" style="background:#ffcc99;"></div>
-                <div class="color-option c-purple" onclick="selectColor('c-purple')" style="background:#e0b0ff;"></div>
+                <div class="color-option c-white-opt selected" onclick="selectColor('c-white')"></div>
+                <div class="color-option c-red-opt" onclick="selectColor('c-red')"></div>
+                <div class="color-option c-green-opt" onclick="selectColor('c-green')"></div>
+                <div class="color-option c-blue-opt" onclick="selectColor('c-blue')"></div>
+                <div class="color-option c-orange-opt" onclick="selectColor('c-orange')"></div>
+                <div class="color-option c-purple-opt" onclick="selectColor('c-purple')"></div>
             </div>
             <input type="hidden" id="selected-color" value="c-white">
             <div style="margin-bottom:15px;"></div>
-
-            <div id="group-amount">
-                <label>Montant (€)</label>
-                <input type="number" id="input-amount" placeholder="0.00" inputmode="decimal">
-            </div>
-
-            <label id="label-date-start">Date</label>
-            <input type="date" id="input-date">
-            <div id="group-date-end" style="display:none;">
-                <label>Date de Retour</label>
-                <input type="date" id="input-date-end">
-            </div>
-            
-            <label>Notes</label>
-            <textarea id="input-desc" rows="2" placeholder="Détails..."></textarea>
-
+            <div id="group-amount"><label>Montant (€)</label><input type="number" id="input-amount" placeholder="0.00" inputmode="decimal"></div>
+            <label id="label-date-start">Date</label><input type="date" id="input-date">
+            <div id="group-date-end" style="display:none;"><label>Date de Retour</label><input type="date" id="input-date-end"></div>
+            <label>Notes</label><textarea id="input-desc" rows="2" placeholder="Détails..."></textarea>
             <div style="display:flex; gap:10px;">
                 <button onclick="closeModal()" style="flex:1; padding:15px; border-radius:12px; border:none; background:var(--separator); color:var(--text);">Annuler</button>
                 <button onclick="saveTransaction()" style="flex:1; padding:15px; border-radius:12px; border:none; background:var(--primary); color:white; font-weight:bold;">Sauvegarder</button>
@@ -378,132 +360,59 @@
         let calendarStartDate = new Date();
         calendarStartDate.setDate(calendarStartDate.getDate() - 3);
 
-        // MIGRATION BUDGET (Si version V7 ou antérieure)
-        if (settings.weeklyBudget && (!settings.budgetHistory || settings.budgetHistory.length === 0)) {
-            // On initialise l'historique avec l'ancien montant à une date passée
-            settings.budgetHistory = [{ date: '2020-01-01', amount: parseFloat(settings.weeklyBudget) }];
-            delete settings.weeklyBudget; 
-            localStorage.setItem('mb_settings', JSON.stringify(settings));
-        }
         if (!settings.budgetHistory) settings.budgetHistory = [];
 
         window.onload = function() {
             document.getElementById('toggle-dark').checked = settings.darkMode || false;
             document.getElementById('view-selector').value = settings.viewMode || 7;
-            
             applyTheme();
-            changeCalendarView(settings.viewMode || 7); // Init Grid vars
+            changeCalendarView(settings.viewMode || 7);
             refreshUI();
             updateBudgetDisplay();
         };
 
-        // --- THEME & VIEW ---
         function toggleTheme() { settings.darkMode = document.getElementById('toggle-dark').checked; saveData(); applyTheme(); }
-        function applyTheme() { 
-            if (settings.darkMode) document.body.classList.add('dark'); else document.body.classList.remove('dark'); 
-            if(currentTab === 'calendar') renderOutlookCalendar();
-        }
-
+        function applyTheme() { if (settings.darkMode) document.body.classList.add('dark'); else document.body.classList.remove('dark'); if(currentTab === 'calendar') renderOutlookCalendar(); }
         function changeCalendarView(days) {
-            settings.viewMode = parseInt(days);
-            saveData();
+            settings.viewMode = parseInt(days); saveData();
             document.documentElement.style.setProperty('--visible-days', days);
-            
-            // Ajustement taille police selon vue
-            if (days == 30) {
-                document.documentElement.style.setProperty('--col-font-size', '12px');
-                document.body.classList.add('view-month');
-            } else {
-                document.documentElement.style.setProperty('--col-font-size', '18px');
-                document.body.classList.remove('view-month');
-            }
+            document.documentElement.style.setProperty('--col-font-size', days==30 ? '12px' : '16px');
             renderOutlookCalendar();
         }
+        function saveData() { localStorage.setItem('mb_transactions', JSON.stringify(transactions)); localStorage.setItem('mb_settings', JSON.stringify(settings)); }
 
-        // --- DATA & BUDGET LOGIC ---
-        function saveData() {
-            localStorage.setItem('mb_transactions', JSON.stringify(transactions));
-            localStorage.setItem('mb_settings', JSON.stringify(settings));
-        }
-
+        // --- BUDGET ENGINE ---
         function updateBudget() {
             const newAmt = parseFloat(document.getElementById('input-new-budget').value);
             if (isNaN(newAmt)) return;
-            
             const todayStr = new Date().toISOString().split('T')[0];
-            
-            // Ajouter à l'historique (Si déjà un changement aujourd'hui, on l'écrase)
             const existingIndex = settings.budgetHistory.findIndex(h => h.date === todayStr);
-            if (existingIndex > -1) {
-                settings.budgetHistory[existingIndex].amount = newAmt;
-            } else {
-                settings.budgetHistory.push({ date: todayStr, amount: newAmt });
-            }
-            
-            // Tri par date
+            if (existingIndex > -1) settings.budgetHistory[existingIndex].amount = newAmt;
+            else settings.budgetHistory.push({ date: todayStr, amount: newAmt });
             settings.budgetHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
-            
-            saveData();
-            document.getElementById('input-new-budget').value = '';
-            alert("Budget mis à jour pour le futur !");
-            refreshUI();
-            updateBudgetDisplay();
+            saveData(); document.getElementById('input-new-budget').value = '';
+            alert("Budget mis à jour !"); refreshUI(); updateBudgetDisplay();
         }
-
-        function updateBudgetDisplay() {
-            // Trouver le budget actif aujourd'hui
-            const active = getBudgetAtDate(new Date());
-            document.getElementById('current-budget-display').innerText = `Actuel : ${active.toFixed(2)}€ / semaine`;
-        }
-
+        function updateBudgetDisplay() { const active = getBudgetAtDate(new Date()); document.getElementById('current-budget-display').innerText = `Actuel : ${active.toFixed(2)}€ / semaine`; }
         function getBudgetAtDate(dateObj) {
             if (!settings.budgetHistory || settings.budgetHistory.length === 0) return 0;
-            // Parcourir l'historique pour trouver le segment actif
-            let activeAmount = 0;
-            const tDate = dateObj.getTime();
-            
-            for (let h of settings.budgetHistory) {
-                const hDate = new Date(h.date).getTime();
-                if (hDate <= tDate) {
-                    activeAmount = h.amount;
-                } else {
-                    break; // On dépasse la date, on arrête
-                }
-            }
+            let activeAmount = 0; const tDate = dateObj.getTime();
+            for (let h of settings.budgetHistory) { if (new Date(h.date).getTime() <= tDate) activeAmount = h.amount; else break; }
             return activeAmount;
         }
-
         function getAutoBudgetBurn(targetDate) {
-            // Calcul intégral du coût budget auto depuis le début jusqu'à targetDate
-            // Simplification : On part d'une date fixe (ex: date du 1er événement ou une date arbitraire loin)
-            // Pour ne pas compliquer, on calcule le burn jour par jour depuis 365 jours en arrière (suffisant)
-            // ou depuis le premier jour de l'historique budget.
-            
             if (!settings.budgetHistory || settings.budgetHistory.length === 0) return 0;
-            
             const startDate = new Date(settings.budgetHistory[0].date);
             const target = new Date(targetDate); target.setHours(0,0,0,0);
-            const today = new Date(); today.setHours(0,0,0,0);
-            
             if (target < startDate) return 0;
-
-            let totalBurn = 0;
-            // Iteration jour par jour (robuste pour les segments)
-            // Optimisable mais OK pour < 5 ans
-            let curr = new Date(startDate);
-            while (curr <= target) {
-                const weekly = getBudgetAtDate(curr);
-                if (weekly > 0) totalBurn += (weekly / 7);
-                curr.setDate(curr.getDate() + 1);
-            }
+            let totalBurn = 0; let curr = new Date(startDate);
+            while (curr <= target) { const weekly = getBudgetAtDate(curr); if (weekly > 0) totalBurn += (weekly / 7); curr.setDate(curr.getDate() + 1); }
             return totalBurn;
         }
 
+        // --- BALANCES ---
         function getBalanceAtDate(targetDate) {
-            let total = 0;
-            const target = new Date(targetDate); target.setHours(0,0,0,0);
-
-            // 1. Transactions
+            let total = 0; const target = new Date(targetDate); target.setHours(0,0,0,0);
             transactions.forEach(t => {
                 let dStart = new Date(t.date); dStart.setHours(0,0,0,0);
                 if (t.type === 'invest') {
@@ -517,76 +426,35 @@
                     }
                 }
             });
-
-            // 2. Budget Auto (Historisé)
-            const burn = getAutoBudgetBurn(target);
-            total -= burn;
-
+            total -= getAutoBudgetBurn(target);
             return total;
         }
-
-        // --- UI REFRESH ---
-        function refreshUI() {
-            calculateTotal();
-            if (currentTab === 'list') renderList();
-            if (currentTab === 'calendar') renderOutlookCalendar();
-            if (currentTab === 'settings') renderWeeklyStats();
-        }
-
         function calculateTotal() {
-            const today = new Date(); today.setHours(0,0,0,0);
-            const total = getBalanceAtDate(today);
+            const total = getBalanceAtDate(new Date());
             document.getElementById('total-capital').innerText = total.toFixed(2).replace('.', ',') + ' €';
-            
-            // Indicateur (Budget actif aujourd'hui)
-            const activeWeekly = getBudgetAtDate(today);
-            if (activeWeekly > 0) {
-                document.getElementById('auto-budget-indicator').innerText = `-${(activeWeekly/7).toFixed(2)}€ / jour (Auto)`;
-            } else {
-                document.getElementById('auto-budget-indicator').innerText = '';
-            }
+            const activeWeekly = getBudgetAtDate(new Date());
+            document.getElementById('auto-budget-indicator').innerText = activeWeekly > 0 ? `-${(activeWeekly/7).toFixed(2)}€ / jour (Auto)` : '';
             return total;
         }
-
         function applyAdjustment() {
-            const amount = parseFloat(document.getElementById('input-adjustment').value);
-            if (!amount) return;
-            const t = {
-                title: "Ajustement Manuel", type: amount >= 0 ? 'income' : 'expense',
-                amount: Math.abs(amount), date: new Date().toISOString().split('T')[0],
-                desc: "Correction", color: 'c-white'
-            };
-            transactions.push(t); saveData(); 
-            document.getElementById('input-adjustment').value = ''; 
-            alert("Ajusté !"); refreshUI();
+            const amount = parseFloat(document.getElementById('input-adjustment').value); if (!amount) return;
+            transactions.push({ title: "Ajustement Manuel", type: amount >= 0 ? 'income' : 'expense', amount: Math.abs(amount), date: new Date().toISOString().split('T')[0], desc: "Correction", color: 'c-white' });
+            saveData(); document.getElementById('input-adjustment').value = ''; alert("Ajusté !"); refreshUI();
         }
 
-        // --- RENDERING ---
-        function renderWeeklyStats() {
-            const container = document.getElementById('weekly-stats'); container.innerHTML = '';
-            const weeks = {};
-            transactions.forEach(t => {
-                if(t.type === 'expense') {
-                    const d = new Date(t.date);
-                    const onejan = new Date(d.getFullYear(),0,1);
-                    const weekNum = Math.ceil((((d - onejan) /86400000) + onejan.getDay()+1)/7);
-                    const key = `${d.getFullYear()}-S${weekNum}`;
-                    if(!weeks[key]) weeks[key] = 0; weeks[key] += parseFloat(t.amount);
-                }
-            });
-            const sortedKeys = Object.keys(weeks).sort().reverse();
-            if(sortedKeys.length === 0) { container.innerHTML = '<div style="text-align:center;color:var(--gray);font-size:12px;">Vide</div>'; return; }
-            sortedKeys.forEach(k => {
-                container.innerHTML += `<div class="week-row"><span>${k}</span><span style="font-weight:bold;color:#FF3B30;">-${weeks[k].toFixed(2)} €</span></div>`;
-            });
-        }
+        // --- RENDER ---
+        function refreshUI() { calculateTotal(); if (currentTab === 'list') renderList(); if (currentTab === 'calendar') renderOutlookCalendar(); if (currentTab === 'settings') renderWeeklyStats(); }
+        function switchTab(t) { currentTab=t; document.querySelectorAll('.view-section').forEach(e=>e.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active')); document.getElementById('view-'+t).classList.add('active'); const h=document.getElementById('main-header'); if(t==='calendar') h.classList.add('hidden'); else h.classList.remove('hidden'); document.querySelector('.tab-btn:nth-child('+(['list','calendar','settings'].indexOf(t)+1)+')').classList.add('active'); document.querySelector('.fab').style.display = t==='settings'?'none':'flex'; refreshUI(); }
 
         function renderOutlookCalendar() {
             const container = document.getElementById('cal-container');
-            const eventsLayer = document.getElementById('cal-events-layer');
-            document.querySelectorAll('.cal-col').forEach(e => e.remove()); eventsLayer.innerHTML = '';
+            const investLayer = document.getElementById('cal-invest-layer');
+            document.querySelectorAll('.cal-col').forEach(e => e.remove()); investLayer.innerHTML = '';
+            
             const today = new Date(); today.setHours(0,0,0,0);
             
+            // 1. GENERATE COLS
+            const domCols = []; // Store refs
             for (let i = 0; i < 60; i++) {
                 let curr = new Date(calendarStartDate); curr.setDate(calendarStartDate.getDate() + i);
                 const isToday = curr.getTime() === today.getTime();
@@ -597,78 +465,99 @@
 
                 const col = document.createElement('div');
                 col.className = `cal-col ${isWeekend ? 'weekend' : ''} ${isToday ? 'today' : ''}`;
-                col.innerHTML = `<div class="cal-col-header"><span class="cal-day-name">${dayName}</span><span class="cal-day-num">${dayNum}</span></div><div class="col-balance">${Math.round(balance)}</div>`;
-                container.insertBefore(col, eventsLayer);
+                // Container for standard events inside the day
+                col.innerHTML = `
+                    <div class="cal-col-header"><span class="cal-day-name">${dayName}</span><span class="cal-day-num">${dayNum}</span></div>
+                    <div class="cal-day-content" id="day-content-${i}"></div>
+                    <div class="col-balance">${Math.round(balance)}</div>
+                `;
+                container.insertBefore(col, investLayer);
+                domCols.push(curr.toISOString().split('T')[0]); // track dates
             }
 
+            // 2. RENDER EVENTS
             const visibleDays = settings.viewMode || 7;
-            const pctUnit = 100 / visibleDays; 
+            const pctUnit = 100 / visibleDays;
 
             transactions.forEach((t, index) => {
-                let startDate = new Date(t.date);
-                let endDate = (t.type === 'invest' && t.endDate) ? new Date(t.endDate) : new Date(t.date);
-                const diffDays = Math.ceil((startDate - calendarStartDate) / (86400000));
-                let duration = 1;
-                if (t.type === 'invest') duration = Math.ceil((endDate - startDate) / (86400000)) + 1;
+                if (t.title === "Ajustement Manuel") return; // FILTER OUT
 
-                if (diffDays >= -duration && diffDays < 65) {
-                    const el = document.createElement('div');
-                    el.className = `event-block ${t.color || 'c-white'}`;
-                    let finalLeft = diffDays; let finalWidth = duration;
-                    if (diffDays < 0) { finalWidth = duration + diffDays; finalLeft = 0; }
+                let startDate = new Date(t.date);
+                
+                // TYPE 1: INVESTMENTS (Absolute Overlay)
+                if (t.type === 'invest') {
+                    let endDate = t.endDate ? new Date(t.endDate) : new Date(t.date);
+                    const diffDays = Math.ceil((startDate - calendarStartDate) / (86400000));
+                    const duration = Math.ceil((endDate - startDate) / (86400000)) + 1;
                     
-                    el.style.left = `calc(${finalLeft} * ${pctUnit}%)`;
-                    el.style.width = `calc(${finalWidth} * ${pctUnit}% - 2px)`; // -2px pour marge visuelle
-                    el.style.top = (index % 10) * 40 + 'px';
-                    el.onclick = () => openModal(index);
-                    
-                    let icon = t.type === 'invest' ? '⏳ ' : '';
-                    el.innerHTML = `<div class="event-title">${icon}${t.title}</div><div class="event-amt">${t.type!=='event'&&t.type!=='invest' ? t.amount+'€' : ''}</div>`;
-                    eventsLayer.appendChild(el);
+                    if (diffDays >= -duration && diffDays < 65) {
+                        const el = document.createElement('div');
+                        el.className = `invest-bar ${t.color || 'c-white'}`;
+                        let finalLeft = diffDays; let finalWidth = duration;
+                        if (diffDays < 0) { finalWidth = duration + diffDays; finalLeft = 0; }
+                        
+                        el.style.left = `calc(${finalLeft} * ${pctUnit}%)`;
+                        el.style.width = `calc(${finalWidth} * ${pctUnit}%)`; // FULL WIDTH NO GAP
+                        // Stack them simply
+                        el.style.top = (index % 5) * 26 + 'px'; 
+                        el.onclick = () => openModal(index);
+                        el.innerHTML = `⏳ ${t.title}`;
+                        investLayer.appendChild(el);
+                    }
+                } 
+                // TYPE 2: STANDARD (Inside Column)
+                else {
+                    const dateStr = startDate.toISOString().split('T')[0];
+                    // Find correct column index
+                    const colIndex = domCols.indexOf(dateStr);
+                    if (colIndex > -1) {
+                        const dayContainer = document.getElementById(`day-content-${colIndex}`);
+                        const el = document.createElement('div');
+                        el.className = `std-event-card ${t.color || 'c-white'}`;
+                        el.onclick = () => openModal(index);
+                        let amountTxt = t.type !== 'event' ? `${t.amount}€` : '';
+                        el.innerHTML = `<div class="std-event-title">${t.title}</div><div class="std-event-amt">${amountTxt}</div>`;
+                        dayContainer.appendChild(el);
+                    }
                 }
             });
         }
 
         function renderList() {
-            const listContainer = document.getElementById('transaction-list'); listContainer.innerHTML = '';
+            const list = document.getElementById('transaction-list'); list.innerHTML = '';
             const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
-            if (sorted.length === 0) listContainer.innerHTML = '<div style="text-align:center;color:var(--gray);margin-top:50px">Aucune opération</div>';
+            if (sorted.length === 0) list.innerHTML = '<div style="text-align:center;color:var(--gray);margin-top:50px">Aucune opération</div>';
             sorted.forEach((t) => {
                 const index = transactions.indexOf(t);
-                let amountHtml = '';
-                if(t.type !== 'event') {
-                    let color = 'var(--text)'; let sign = '';
-                    if (t.type === 'income') { color = '#34C759'; sign = '+'; }
-                    else if (t.type === 'expense') { color = '#FF3B30'; sign = '-'; }
-                    else if (t.type === 'invest') { color = '#007AFF'; sign = '⏳ '; }
-                    amountHtml = `<div class="t-amount" style="color:${color}">${sign}${parseFloat(t.amount).toFixed(2)}</div>`;
-                }
-                let dateTxt = new Date(t.date).toLocaleDateString('fr-FR');
-                if (t.type === 'invest' && t.endDate) dateTxt += ' ➔ ' + new Date(t.endDate).toLocaleDateString('fr-FR');
-                listContainer.innerHTML += `<div class="transaction-card ${t.color||'c-white'}" onclick="openModal(${index})"><div class="t-info"><div class="t-title">${t.title}</div><div class="t-date">${dateTxt}</div></div>${amountHtml}</div>`;
+                let col = 'var(--text)', s = '';
+                if (t.type === 'income') { col = '#34C759'; s = '+'; }
+                else if (t.type === 'expense') { col = '#FF3B30'; s = '-'; }
+                else if (t.type === 'invest') { col = '#007AFF'; s = '⏳ '; }
+                let d = new Date(t.date).toLocaleDateString('fr-FR');
+                if (t.type === 'invest' && t.endDate) d += ' ➔ ' + new Date(t.endDate).toLocaleDateString('fr-FR');
+                list.innerHTML += `<div class="transaction-card ${t.color||'c-white'}" onclick="openModal(${index})"><div class="t-info"><div class="t-title">${t.title}</div><div class="t-date">${d}</div></div>${t.type!=='event'?`<div class="t-amount" style="color:${col}">${s}${parseFloat(t.amount).toFixed(2)}</div>`:''}</div>`;
             });
         }
+        function renderWeeklyStats() {
+            const c = document.getElementById('weekly-stats'); c.innerHTML = ''; const w = {};
+            transactions.forEach(t => { if(t.type === 'expense'){ const d = new Date(t.date); const k = `${d.getFullYear()}-S${Math.ceil((((d - new Date(d.getFullYear(),0,1)) /86400000) + new Date(d.getFullYear(),0,1).getDay()+1)/7)}`; w[k] = (w[k]||0) + parseFloat(t.amount); }});
+            const ks = Object.keys(w).sort().reverse();
+            if(ks.length === 0) c.innerHTML = '<div style="text-align:center;color:var(--gray);font-size:12px;">Vide</div>';
+            ks.forEach(k => c.innerHTML += `<div class="week-row"><span>${k}</span><span style="font-weight:bold;color:#FF3B30;">-${w[k].toFixed(2)} €</span></div>`);
+        }
 
-        // --- FORM ---
-        function switchTab(t) { currentTab=t; document.querySelectorAll('.view-section').forEach(e=>e.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active')); document.getElementById('view-'+t).classList.add('active'); 
-        const h=document.getElementById('main-header'); if(t==='calendar') h.classList.add('hidden'); else h.classList.remove('hidden');
-        document.querySelector('.tab-btn:nth-child('+(['list','calendar','settings'].indexOf(t)+1)+')').classList.add('active'); 
-        document.querySelector('.fab').style.display = t==='settings'?'none':'flex'; refreshUI(); }
-        
-        function runSimulation() { const d=document.getElementById('sim-date').value; if(!d)return; const bal=getBalanceAtDate(d); const cur=getBalanceAtDate(new Date()); const diff=bal-cur; document.getElementById('sim-balance').innerText=bal.toFixed(2)+' €'; const de=document.getElementById('sim-diff'); de.innerText=(diff>=0?'+':'')+diff.toFixed(2)+' € vs Auj.'; de.style.color=diff>=0?'#34C759':'#FF3B30'; document.getElementById('sim-result').style.display='block'; }
-
-        // Modal fns same as before
+        // --- FORM & UTILS ---
         const modal = document.getElementById('modal');
         function handleTypeChange() { const t=document.getElementById('input-type').value; document.getElementById('group-amount').style.display=t==='event'?'none':'block'; document.getElementById('group-date-end').style.display=t==='invest'?'block':'none'; document.getElementById('label-date-start').innerText=t==='invest'?'Départ':'Date'; }
-        function selectColor(c) { document.querySelectorAll('.color-option').forEach(e=>e.classList.remove('selected')); document.querySelector('.'+c).classList.add('selected'); document.getElementById('selected-color').value=c; }
-        function openModal(i=-1) { modal.style.display='flex'; document.getElementById('edit-index').value=i; document.getElementById('input-title').value=''; document.getElementById('input-amount').value=''; document.getElementById('input-date').valueAsDate=new Date(); document.getElementById('input-date-end').valueAsDate=new Date(); document.getElementById('input-desc').value=''; document.getElementById('input-type').value='expense'; selectColor('c-white'); document.getElementById('btn-delete').style.display='none'; if(i>-1){ const t=transactions[i]; document.getElementById('modal-title').innerText="Modifier"; document.getElementById('input-title').value=t.title; document.getElementById('input-type').value=t.type; document.getElementById('input-amount').value=t.amount; document.getElementById('input-date').value=t.date; if(t.endDate)document.getElementById('input-date-end').value=t.endDate; document.getElementById('input-desc').value=t.desc||''; selectColor(t.color||'c-white'); document.getElementById('btn-delete').style.display='block'; } else document.getElementById('modal-title').innerText="Nouveau"; handleTypeChange(); }
+        function selectColor(c) { document.querySelectorAll('.color-option').forEach(e=>e.classList.remove('selected')); document.querySelector('.'+c+'\\.selected')?.classList.remove('selected'); document.querySelector(`.c-${c.split('-')[1]}-opt`).classList.add('selected'); document.getElementById('selected-color').value=c; }
+        function openModal(i=-1) { modal.style.display='flex'; document.getElementById('edit-index').value=i; document.getElementById('input-title').value=''; document.getElementById('input-amount').value=''; document.getElementById('input-date').valueAsDate=new Date(); document.getElementById('input-date-end').valueAsDate=new Date(); document.getElementById('input-desc').value=''; document.getElementById('input-type').value='expense'; selectColor('c-white'); document.getElementById('btn-delete').style.display='none'; if(i>-1){ const t=transactions[i]; document.getElementById('modal-title').innerText="Modifier"; document.getElementById('input-title').value=t.title; document.getElementById('input-type').value=t.type; document.getElementById('input-amount').value=t.amount; document.getElementById('input-date').value=t.date; if(t.endDate)document.getElementById('input-date-end').value=t.endDate; document.getElementById('input-desc').value=t.desc||''; selectColor(t.color||'c-white'); document.getElementById('btn-delete').style.display='block'; } handleTypeChange(); }
         function closeModal() { modal.style.display='none'; }
         function saveTransaction() { const i=parseInt(document.getElementById('edit-index').value); const ti=document.getElementById('input-title').value; const ty=document.getElementById('input-type').value; const am=document.getElementById('input-amount').value; const da=document.getElementById('input-date').value; const ed=document.getElementById('input-date-end').value; const de=document.getElementById('input-desc').value; const co=document.getElementById('selected-color').value; if(!ti||!da)return alert("Erreur"); let fd=da; if(ty==='invest')fd=ed||da; const item={title:ti,type:ty,amount:(ty==='event'?0:am),date:da,endDate:fd,desc:de,color:co}; if(i>-1)transactions[i]=item; else transactions.push(item); saveData(); closeModal(); refreshUI(); }
         function deleteCurrentItem() { if(confirm("Supprimer ?")){ transactions.splice(document.getElementById('edit-index').value,1); saveData(); closeModal(); refreshUI(); } }
         function resetApp(){ if(confirm("Effacer tout ?")){ localStorage.clear(); location.reload(); } }
         function exportData(){ prompt("Copier :", JSON.stringify({t:transactions,s:settings})); }
         function importData(){ const d=prompt("Coller :"); if(d){ try{ const p=JSON.parse(d); transactions=p.t; settings=p.s; saveData(); location.reload(); }catch(e){alert("Erreur");} } }
-
+        function runSimulation() { const d=document.getElementById('sim-date').value; if(!d)return; const bal=getBalanceAtDate(d); const cur=getBalanceAtDate(new Date()); const diff=bal-cur; document.getElementById('sim-balance').innerText=bal.toFixed(2)+' €'; const de=document.getElementById('sim-diff'); de.innerText=(diff>=0?'+':'')+diff.toFixed(2)+' € vs Auj.'; de.style.color=diff>=0?'#34C759':'#FF3B30'; document.getElementById('sim-result').style.display='block'; }
     </script>
 </body>
 </html>
