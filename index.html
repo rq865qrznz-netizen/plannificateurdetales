@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Mon Trésor V5</title>
+    <title>Mon Trésor V6</title>
     
     <style>
+        /* --- THÈMES (Variables) --- */
         :root {
             --primary: #007AFF;
             --bg: #F2F2F7;
@@ -15,7 +16,22 @@
             --text: #000000;
             --gray: #8E8E93;
             --separator: #C6C6C8;
-            --column-width: 20vw; /* 5 jours par écran (100/5) */
+            --cal-bg: #F2F2F7;
+            --cal-col-border: #E5E5EA;
+            --cal-weekend: #EBEBF0;
+            --column-width: 20vw; /* 5 jours par écran */
+        }
+
+        /* Mode Sombre (Class .dark sur body) */
+        body.dark {
+            --bg: #000000;
+            --card: #1c1c1e;
+            --text: #FFFFFF;
+            --gray: #98989D;
+            --separator: #38383A;
+            --cal-bg: #000000;
+            --cal-col-border: #38383A;
+            --cal-weekend: #151516;
         }
 
         body {
@@ -24,50 +40,45 @@
             color: var(--text);
             margin: 0; padding: 0;
             height: 100vh;
-            overflow: hidden; /* Important pour le plein écran */
+            overflow: hidden;
             -webkit-tap-highlight-color: transparent;
+            transition: background-color 0.3s, color 0.3s;
         }
 
-        /* --- HEADER (VISIBLE SEULEMENT EN LISTE) --- */
+        /* --- HEADER (LISTE & RÉGLAGES) --- */
         header {
-            background-color: rgba(242, 242, 247, 0.95);
-            backdrop-filter: blur(20px);
-            padding: 10px 20px;
-            padding-top: 50px;
+            background-color: var(--card); /* Un peu plus opaque */
+            padding: 15px 20px;
+            padding-top: 50px; /* Safe area */
             text-align: center;
             border-bottom: 1px solid var(--separator);
             position: fixed; top: 0; left: 0; right: 0; z-index: 50;
             transition: transform 0.3s ease;
         }
-
+        
         header.hidden { transform: translateY(-100%); }
 
         h1 { font-size: 13px; text-transform: uppercase; color: var(--gray); margin: 0; letter-spacing: 1px;}
         #total-capital { font-size: 34px; font-weight: 700; margin: 4px 0; }
+        #auto-budget-indicator { font-size:12px; color: var(--gray); }
 
         /* --- VUES --- */
         .view-section { 
             display: none; 
             height: 100%; 
             box-sizing: border-box;
-            padding-top: 130px; /* Espace pour le header par défaut */
-            padding-bottom: 80px; /* Espace menu bas */
+            padding-top: 140px; /* Header space */
+            padding-bottom: 80px; /* Menu bas space */
             overflow-y: auto;
         }
-        
         .view-section.active { display: block; }
-        
-        /* Ajustement spécifique pour le calendrier plein écran */
-        #view-calendar.active {
-            padding-top: 50px; /* Juste le safe area, pas de header */
-            padding-bottom: 80px;
-            padding-left: 0; padding-right: 0;
-            overflow: hidden; /* Le scroll est géré à l'intérieur */
-            background: #1c1c1e; /* Fond sombre style Outlook */
-        }
 
-        #view-settings.active {
-            padding-top: 60px; /* Pas de header solde */
+        /* Ajustements spécifiques */
+        #view-calendar.active {
+            padding-top: 50px; /* Pas de header */
+            padding-left: 0; padding-right: 0;
+            overflow: hidden; /* Scroll interne */
+            background: var(--cal-bg);
         }
 
         /* --- LISTE --- */
@@ -76,115 +87,98 @@
             border-radius: 12px;
             padding: 15px; margin: 10px 20px;
             display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border-left: 5px solid transparent;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid transparent;
         }
         .t-info { flex-grow: 1; margin-left: 10px; }
         .t-title { font-weight: 600; font-size: 16px; }
-        .t-date { font-size: 12px; color: var(--gray); margin-top: 2px;}
+        .t-date { font-size: 12px; color: var(--gray); margin-top: 3px;}
         .t-amount { font-weight: 700; font-size: 16px; }
 
-        /* --- CALENDRIER STYLE OUTLOOK (GRID) --- */
+        /* --- CALENDRIER (Outlook Style) --- */
         #cal-container {
-            display: flex;
-            height: 100%;
-            overflow-x: auto;
-            position: relative;
-            background: #1c1c1e; /* Fond sombre */
+            display: flex; height: 100%; overflow-x: auto; position: relative;
+            background: var(--cal-bg);
         }
-
-        /* Les colonnes de jours (Background) */
         .cal-col {
-            min-width: var(--column-width);
-            width: var(--column-width);
-            height: 100%;
-            border-right: 1px solid #3a3a3c;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            position: relative;
+            min-width: var(--column-width); width: var(--column-width);
+            height: 100%; border-right: 1px solid var(--cal-col-border);
+            box-sizing: border-box; display: flex; flex-direction: column; position: relative;
         }
+        .cal-col.weekend { background: var(--cal-weekend); }
+        .cal-col.today { background: rgba(0, 122, 255, 0.05); }
 
-        .cal-col.weekend { background: #2c2c2e; }
-        .cal-col.today { background: rgba(10, 132, 255, 0.1); }
-
-        /* En-tête du jour (fixe en haut de la colonne) */
         .cal-col-header {
-            text-align: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #3a3a3c;
-            color: #8E8E93;
-            height: 50px; box-sizing: border-box;
+            text-align: center; padding: 10px 0;
+            border-bottom: 1px solid var(--cal-col-border);
+            color: var(--gray); height: 50px; box-sizing: border-box;
         }
         .cal-day-name { font-size: 10px; text-transform: uppercase; display: block; }
-        .cal-day-num { font-size: 18px; font-weight: 600; color: white; }
-        .today .cal-day-num { color: #0A84FF; }
+        .cal-day-num { font-size: 18px; font-weight: 600; color: var(--text); }
+        .today .cal-day-num { color: var(--primary); }
 
-        /* Zone des événements */
+        /* Events Layer */
         #cal-events-layer {
-            position: absolute;
-            top: 50px; /* Hauteur header jour */
-            left: 0;
-            bottom: 0;
-            display: flex; /* Juste pour avoir un contexte */
+            position: absolute; top: 50px; left: 0; bottom: 0; display: flex;
         }
-
-        /* Blocs Événements */
         .event-block {
-            position: absolute;
-            height: 40px; /* Hauteur fixe d'un bloc */
-            border-radius: 4px;
-            padding: 5px;
-            box-sizing: border-box;
-            font-size: 10px;
-            color: white;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.1);
+            position: absolute; height: 36px; border-radius: 6px;
+            padding: 4px 6px; box-sizing: border-box; font-size: 10px;
+            overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
             display: flex; flex-direction: column; justify-content: center;
+            border-left-width: 4px; border-left-style: solid;
+            /* Pastel style override via classes below */
         }
+        .event-title { font-weight: 700; color: var(--text); }
+        .event-amt { opacity: 0.8; font-size: 9px; color: var(--text); }
 
-        .event-title { font-weight: bold; }
-        .event-amt { opacity: 0.8; }
-
-        /* Indicateur de solde (tout en bas de la colonne) */
         .col-balance {
-            position: absolute;
-            bottom: 10px; left: 0; right: 0;
-            text-align: center;
-            font-size: 10px;
-            color: #8E8E93;
+            position: absolute; bottom: 15px; left: 0; right: 0;
+            text-align: center; font-size: 11px; font-weight: 600; color: var(--gray);
         }
+
+        /* --- SIMULATEUR (DANS RÉGLAGES) --- */
+        .simulator-box {
+            background: var(--card); margin: 0 20px 20px 20px;
+            border-radius: 12px; padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .sim-input-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; }
+        .sim-result { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--separator); display: none; }
+        .sim-balance-big { font-size: 32px; font-weight: 800; color: var(--text); margin: 10px 0; }
+        .sim-diff { font-size: 14px; font-weight: 600; margin-bottom: 15px; }
+        .sim-event-list { text-align: left; font-size: 13px; color: var(--gray); line-height: 1.6; }
+        .sim-item-pos { color: #34C759; }
+        .sim-item-neg { color: #FF3B30; }
 
         /* --- RÉGLAGES --- */
-        .settings-group { background: var(--card); border-radius: 12px; padding: 15px; margin-bottom: 20px; margin-left:20px; margin-right:20px; }
-        .settings-title { font-size: 13px; color: var(--gray); text-transform: uppercase; margin-bottom: 10px; margin-left: 30px; font-weight: 600;}
+        .settings-group { background: var(--card); border-radius: 12px; padding: 15px; margin: 0 20px 20px 20px; }
+        .settings-title { font-size: 13px; color: var(--gray); text-transform: uppercase; margin: 0 0 8px 30px; font-weight: 600;}
         .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        
-        /* --- COULEURS --- */
+
+        /* --- COULEURS PASTELS --- */
         .color-selector { display: flex; gap: 10px; overflow-x: auto; padding: 5px; }
         .color-option { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; flex-shrink: 0; }
-        .color-option.selected { border-color: #000; transform: scale(1.1); }
-        
-        /* Couleurs pour les blocs (plus opaques pour le calendrier sombre) */
-        .c-white { background: #636366; border-left: 3px solid #fff; }
-        .c-red { background: #d70015; }
-        .c-green { background: #248a3d; }
-        .c-blue { background: #0040DD; }
-        .c-yellow { background: #ffd60a; color: black; }
-        .c-purple { background: #bf5af2; }
-        .c-orange { background: #ff9f0a; }
+        .color-option.selected { border-color: var(--text); transform: scale(1.1); }
 
-        /* --- NAV & FAB --- */
+        /* Définition des pastels (Bg transparent + Bordure forte) */
+        .c-white  { background: rgba(142, 142, 147, 0.15); border-left-color: #8E8E93 !important; }
+        .c-red    { background: rgba(255, 59, 48, 0.15);   border-left-color: #FF3B30 !important; }
+        .c-green  { background: rgba(52, 199, 89, 0.15);   border-left-color: #34C759 !important; }
+        .c-blue   { background: rgba(0, 122, 255, 0.15);   border-left-color: #007AFF !important; }
+        .c-yellow { background: rgba(255, 204, 0, 0.15);   border-left-color: #FFCC00 !important; }
+        .c-orange { background: rgba(255, 149, 0, 0.15);   border-left-color: #FF9500 !important; }
+        .c-purple { background: rgba(175, 82, 222, 0.15);  border-left-color: #AF52DE !important; }
+
+        /* --- TAB BAR & FAB --- */
         .tab-bar {
             position: fixed; bottom: 0; width: 100%;
-            background: rgba(242,242,247,0.95); backdrop-filter: blur(10px);
-            border-top: 1px solid #3a3a3c;
+            background: var(--card);
+            border-top: 1px solid var(--separator);
             display: flex; justify-content: space-around; padding: 10px 0 30px 0; z-index: 100;
         }
-        .tab-btn { border: none; background: none; color: #8E8E93; font-size: 10px; display: flex; flex-direction: column; align-items: center; }
+        .tab-btn { border: none; background: none; color: var(--gray); font-size: 10px; display: flex; flex-direction: column; align-items: center; }
         .tab-btn.active { color: var(--primary); }
         .tab-icon { font-size: 22px; margin-bottom: 2px; }
 
@@ -202,13 +196,18 @@
             background: rgba(0,0,0,0.4); z-index: 200; align-items: flex-end;
         }
         .modal-content {
-            background: #F2F2F7; width: 100%; border-radius: 20px 20px 0 0;
+            background: var(--bg); width: 100%; border-radius: 20px 20px 0 0;
             padding: 20px; box-sizing: border-box; max-height: 90vh; overflow-y: auto;
             animation: slideUp 0.3s;
         }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         
-        input, select, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; box-sizing: border-box; font-family: inherit;}
+        input, select, textarea { 
+            width: 100%; padding: 12px; margin-bottom: 15px; 
+            border: 1px solid var(--separator); border-radius: 10px; 
+            font-size: 16px; box-sizing: border-box; font-family: inherit;
+            background: var(--card); color: var(--text);
+        }
         
     </style>
 </head>
@@ -217,7 +216,7 @@
     <header id="main-header">
         <h1>Solde Actuel</h1>
         <div id="total-capital">...</div>
-        <div id="auto-budget-indicator" style="font-size:12px; color:#8E8E93;"></div>
+        <div id="auto-budget-indicator"></div>
     </header>
 
     <div id="view-list" class="view-section active">
@@ -231,28 +230,49 @@
     </div>
 
     <div id="view-settings" class="view-section">
-        <div class="settings-title">Ma Trésorerie</div>
-        <div class="settings-group">
-            <div class="setting-row">
-                <label>Capital de départ / Ajustement (€)</label>
+        
+        <div class="simulator-box">
+            <h3 style="margin-top:0; font-size:14px; text-transform:uppercase; color:var(--gray);">Visionneuse Temporelle</h3>
+            <div class="sim-input-row">
+                <input type="date" id="sim-date" style="margin-bottom:0; width:auto;">
+                <button onclick="runSimulation()" style="background:var(--primary); color:white; border:none; border-radius:10px; padding:0 20px; font-weight:bold;">VOIR</button>
             </div>
-            <div style="display:flex; gap:10px;">
-                <input type="number" id="setting-initial-capital" placeholder="Solde actuel..." onchange="saveSettings()" style="margin-bottom:0;">
-                <button onclick="saveSettings()" style="background:var(--primary); color:white; border:none; border-radius:8px; width:50px;">OK</button>
+            
+            <div id="sim-result" class="sim-result">
+                <div style="font-size:12px; color:var(--gray);">Solde prévu à cette date</div>
+                <div id="sim-balance" class="sim-balance-big"></div>
+                <div id="sim-diff" class="sim-diff"></div>
+                <div id="sim-list" class="sim-event-list"></div>
             </div>
         </div>
 
-        <div class="settings-title">Budget Automatique</div>
+        <div class="settings-title">Ma Trésorerie</div>
         <div class="settings-group">
-            <label>Budget Hebdo (€)</label>
-            <input type="number" id="setting-weekly-budget" placeholder="ex: 100" onchange="saveSettings()">
+            <div class="setting-row">
+                <label>Capital de départ (€)</label>
+                <div style="display:flex; gap:5px;">
+                    <input type="number" id="setting-initial-capital" placeholder="0" onchange="saveSettings()" style="width:80px; margin:0; text-align:right;">
+                </div>
+            </div>
+            <div class="setting-row">
+                <label>Budget Hebdo Auto (€)</label>
+                <input type="number" id="setting-weekly-budget" placeholder="0" onchange="saveSettings()" style="width:80px; margin:0; text-align:right;">
+            </div>
+        </div>
+
+        <div class="settings-title">Apparence</div>
+        <div class="settings-group">
+            <div class="setting-row">
+                <label>Mode Sombre (Dark)</label>
+                <input type="checkbox" id="toggle-dark" onchange="toggleTheme()" style="width:auto; margin:0;">
+            </div>
         </div>
 
         <div class="settings-title">Données</div>
         <div class="settings-group">
-            <button onclick="exportData()" style="width:100%; padding:10px; margin-bottom:10px;">Sauvegarder</button>
-            <button onclick="importData()" style="width:100%; padding:10px; margin-bottom:10px;">Importer</button>
-            <button onclick="resetApp()" style="width:100%; padding:10px; color:red;">Reset Total</button>
+            <button onclick="exportData()" style="width:100%; padding:10px; margin-bottom:5px; background:var(--bg); border:1px solid var(--separator); border-radius:8px; color:var(--text);">Sauvegarder</button>
+            <button onclick="importData()" style="width:100%; padding:10px; margin-bottom:5px; background:var(--bg); border:1px solid var(--separator); border-radius:8px; color:var(--text);">Importer</button>
+            <button onclick="resetApp()" style="width:100%; padding:10px; background:transparent; border:1px solid #FF3B30; color:#FF3B30; border-radius:8px;">Reset Total</button>
         </div>
     </div>
 
@@ -276,61 +296,81 @@
             <input type="hidden" id="edit-index" value="-1">
 
             <label>Titre</label>
-            <input type="text" id="input-title" placeholder="Ex: Vacances">
+            <input type="text" id="input-title" placeholder="Ex: Salaire, Loyer...">
+
+            <label>Type</label>
+            <select id="input-type" onchange="handleTypeChange()">
+                <option value="expense">📉 Dépense</option>
+                <option value="income">📈 Revenu</option>
+                <option value="invest">⏳ Investissement (Bloqué)</option>
+                <option value="event">📝 Note</option>
+            </select>
 
             <label>Couleur</label>
             <div class="color-selector" id="color-picker">
-                <div class="color-option c-white selected" onclick="selectColor('c-white')" style="background:#ccc;"></div>
-                <div class="color-option c-red" onclick="selectColor('c-red')" style="background:#d70015;"></div>
-                <div class="color-option c-green" onclick="selectColor('c-green')" style="background:#248a3d;"></div>
-                <div class="color-option c-blue" onclick="selectColor('c-blue')" style="background:#0040DD;"></div>
-                <div class="color-option c-orange" onclick="selectColor('c-orange')" style="background:#ff9f0a;"></div>
-                <div class="color-option c-purple" onclick="selectColor('c-purple')" style="background:#bf5af2;"></div>
+                <div class="color-option c-white selected" onclick="selectColor('c-white')" style="background:#ddd;"></div>
+                <div class="color-option c-red" onclick="selectColor('c-red')" style="background:#ffcccb;"></div>
+                <div class="color-option c-green" onclick="selectColor('c-green')" style="background:#90ee90;"></div>
+                <div class="color-option c-blue" onclick="selectColor('c-blue')" style="background:#add8e6;"></div>
+                <div class="color-option c-orange" onclick="selectColor('c-orange')" style="background:#ffcc99;"></div>
+                <div class="color-option c-purple" onclick="selectColor('c-purple')" style="background:#e0b0ff;"></div>
             </div>
             <input type="hidden" id="selected-color" value="c-white">
             <div style="margin-bottom:15px;"></div>
 
-            <label>Type & Montant</label>
-            <div style="display:flex; gap:10px;">
-                <select id="input-type" onchange="toggleAmount()" style="width:40%">
-                    <option value="expense">Dépense</option>
-                    <option value="income">Revenu</option>
-                    <option value="event">Note</option>
-                </select>
-                <input type="number" id="input-amount" placeholder="0.00" inputmode="decimal" style="width:60%">
+            <div id="group-amount">
+                <label>Montant (€)</label>
+                <input type="number" id="input-amount" placeholder="0.00" inputmode="decimal">
             </div>
 
-            <label>Dates (Début - Fin)</label>
-            <div style="display:flex; gap:10px;">
-                <input type="date" id="input-date">
+            <label id="label-date-start">Date</label>
+            <input type="date" id="input-date">
+            
+            <div id="group-date-end" style="display:none;">
+                <label>Date de Retour (Récupération)</label>
                 <input type="date" id="input-date-end">
+                <p style="font-size:11px; color:var(--gray); margin-top:-10px;">L'argent est déduit au début et réajouté à la fin.</p>
             </div>
             
             <label>Notes</label>
             <textarea id="input-desc" rows="2" placeholder="Détails..."></textarea>
 
             <div style="display:flex; gap:10px;">
-                <button onclick="closeModal()" style="flex:1; padding:15px; border-radius:12px; border:none; background:#E5E5EA;">Annuler</button>
+                <button onclick="closeModal()" style="flex:1; padding:15px; border-radius:12px; border:none; background:var(--separator); color:var(--text);">Annuler</button>
                 <button onclick="saveTransaction()" style="flex:1; padding:15px; border-radius:12px; border:none; background:var(--primary); color:white; font-weight:bold;">Sauvegarder</button>
             </div>
-            <button id="btn-delete" onclick="deleteCurrentItem()" style="width:100%; margin-top:10px; padding:15px; border:none; background:none; color:red; display:none;">Supprimer</button>
+            <button id="btn-delete" onclick="deleteCurrentItem()" style="width:100%; margin-top:10px; padding:15px; border:none; background:none; color:#FF3B30; display:none;">Supprimer</button>
         </div>
     </div>
 
     <script>
         let transactions = JSON.parse(localStorage.getItem('mb_transactions')) || [];
-        let settings = JSON.parse(localStorage.getItem('mb_settings')) || { weeklyBudget: 0, initialCapital: 0 };
+        let settings = JSON.parse(localStorage.getItem('mb_settings')) || { weeklyBudget: 0, initialCapital: 0, darkMode: false };
         let currentTab = 'list';
-        
-        // Date de début du calendrier (fixé à aujourd'hui - 3 jours pour l'instant)
         let calendarStartDate = new Date();
         calendarStartDate.setDate(calendarStartDate.getDate() - 3);
 
         window.onload = function() {
             document.getElementById('setting-weekly-budget').value = settings.weeklyBudget || '';
             document.getElementById('setting-initial-capital').value = settings.initialCapital || 0;
+            document.getElementById('toggle-dark').checked = settings.darkMode || false;
+            applyTheme();
             refreshUI();
         };
+
+        // --- THÈME ---
+        function toggleTheme() {
+            settings.darkMode = document.getElementById('toggle-dark').checked;
+            saveData();
+            applyTheme();
+        }
+
+        function applyTheme() {
+            if (settings.darkMode) document.body.classList.add('dark');
+            else document.body.classList.remove('dark');
+            // Refresh calendar background logic
+            if(currentTab === 'calendar') renderOutlookCalendar();
+        }
 
         function saveData() {
             localStorage.setItem('mb_transactions', JSON.stringify(transactions));
@@ -343,24 +383,9 @@
             if (currentTab === 'calendar') renderOutlookCalendar();
         }
 
+        // --- LOGIQUE FINANCIÈRE ---
         function calculateTotal() {
-            const today = new Date(); today.setHours(0,0,0,0);
-            let total = parseFloat(settings.initialCapital) || 0;
-
-            transactions.forEach(t => {
-                let tDate = new Date(t.date); tDate.setHours(0,0,0,0);
-                if (tDate <= today) {
-                    if (t.type === 'income') total += parseFloat(t.amount);
-                    if (t.type === 'expense') total -= parseFloat(t.amount);
-                }
-            });
-
-            document.getElementById('total-capital').innerText = total.toFixed(2).replace('.', ',') + ' €';
-            
-            const dailyBurn = (settings.weeklyBudget || 0) / 7;
-            if (dailyBurn > 0) document.getElementById('auto-budget-indicator').innerText = `-${dailyBurn.toFixed(2)}€ / jour (Auto)`;
-            
-            return total;
+            return getBalanceAtDate(new Date()); // Solde aujourd'hui
         }
 
         function getBalanceAtDate(targetDate) {
@@ -369,19 +394,40 @@
             const target = new Date(targetDate); target.setHours(0,0,0,0);
 
             transactions.forEach(t => {
-                let tDate = new Date(t.date); tDate.setHours(0,0,0,0);
-                if (tDate <= target) {
-                    if (t.type === 'income') total += parseFloat(t.amount);
-                    if (t.type === 'expense') total -= parseFloat(t.amount);
+                let dStart = new Date(t.date); dStart.setHours(0,0,0,0);
+                
+                // Si c'est un investissement
+                if (t.type === 'invest') {
+                    let dEnd = new Date(t.endDate); dEnd.setHours(0,0,0,0);
+                    // On retire l'argent au début
+                    if (dStart <= target) total -= parseFloat(t.amount);
+                    // On le remet à la fin
+                    if (dEnd <= target) total += parseFloat(t.amount);
+                } 
+                // Si c'est standard (revenu/dépense)
+                else {
+                    if (dStart <= target) {
+                        if (t.type === 'income') total += parseFloat(t.amount);
+                        if (t.type === 'expense') total -= parseFloat(t.amount);
+                    }
                 }
             });
 
+            // Budget auto
             const dailyBurn = (settings.weeklyBudget || 0) / 7;
             if (dailyBurn > 0 && target > start) {
                 const diffTime = Math.abs(target - start);
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
                 total -= (diffDays * dailyBurn);
             }
+
+            // Mise à jour de l'affichage Header (seulement si on calcule pour aujourd'hui)
+            const today = new Date(); today.setHours(0,0,0,0);
+            if (target.getTime() === today.getTime()) {
+                document.getElementById('total-capital').innerText = total.toFixed(2).replace('.', ',') + ' €';
+                if (dailyBurn > 0) document.getElementById('auto-budget-indicator').innerText = `-${dailyBurn.toFixed(2)}€ / jour (Auto)`;
+            }
+
             return total;
         }
 
@@ -392,14 +438,16 @@
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById('view-' + tabName).classList.add('active');
             
-            // Gestion Header
+            // Header Logic
             const header = document.getElementById('main-header');
-            if (tabName === 'list') header.classList.remove('hidden');
-            else header.classList.add('hidden');
+            if (tabName === 'calendar') header.classList.add('hidden');
+            else header.classList.remove('hidden');
 
+            // Active Tab UI
             const btnIndex = ['list', 'calendar', 'settings'].indexOf(tabName);
             document.querySelectorAll('.tab-btn')[btnIndex].classList.add('active');
 
+            // FAB
             const fab = document.querySelector('.fab');
             if(tabName === 'settings') fab.style.display = 'none';
             else fab.style.display = 'flex';
@@ -407,28 +455,74 @@
             refreshUI();
         }
 
-        // --- CALENDRIER OUTLOOK ---
+        // --- SIMULATEUR ---
+        function runSimulation() {
+            const dateInput = document.getElementById('sim-date').value;
+            if(!dateInput) return;
+            const target = new Date(dateInput);
+            const today = new Date(); today.setHours(0,0,0,0);
+
+            const balance = getBalanceAtDate(target);
+            const current = getBalanceAtDate(today);
+            const diff = balance - current;
+
+            document.getElementById('sim-balance').innerText = balance.toFixed(2) + ' €';
+            
+            const diffEl = document.getElementById('sim-diff');
+            diffEl.innerText = (diff >= 0 ? '+' : '') + diff.toFixed(2) + ' € vs Aujourd\'hui';
+            diffEl.style.color = diff >= 0 ? '#34C759' : '#FF3B30';
+
+            // Liste des variations
+            const listEl = document.getElementById('sim-list');
+            listEl.innerHTML = '';
+            
+            // Filtrer les mouvements futurs
+            let moves = [];
+            transactions.forEach(t => {
+                const d = new Date(t.date);
+                if (d > today && d <= target) {
+                    if (t.type === 'income') moves.push({t: t.title, a: t.amount, type: 'plus'});
+                    if (t.type === 'expense') moves.push({t: t.title, a: -t.amount, type: 'minus'});
+                    if (t.type === 'invest') moves.push({t: 'Invest: ' + t.title, a: -t.amount, type: 'minus'});
+                }
+                // Retours d'investissements
+                if (t.type === 'invest') {
+                    const dEnd = new Date(t.endDate);
+                    if (dEnd > today && dEnd <= target) {
+                        moves.push({t: 'Retour: ' + t.title, a: t.amount, type: 'plus'});
+                    }
+                }
+            });
+
+            if (moves.length === 0) listEl.innerHTML = "Pas d'opérations prévues.";
+            
+            moves.forEach(m => {
+                listEl.innerHTML += `<div class="${m.a > 0 ? 'sim-item-pos' : 'sim-item-neg'}">
+                    ${m.a > 0 ? '+' : ''}${parseFloat(m.a).toFixed(2)}€ : ${m.t}
+                </div>`;
+            });
+
+            document.getElementById('sim-result').style.display = 'block';
+        }
+
+        // --- CALENDRIER ---
         function renderOutlookCalendar() {
             const container = document.getElementById('cal-container');
             const eventsLayer = document.getElementById('cal-events-layer');
             
-            // Nettoyer sauf eventsLayer
-            const oldCols = document.querySelectorAll('.cal-col');
-            oldCols.forEach(e => e.remove());
-            eventsLayer.innerHTML = ''; // Reset events
+            // Clean columns
+            document.querySelectorAll('.cal-col').forEach(e => e.remove());
+            eventsLayer.innerHTML = '';
 
             const today = new Date(); today.setHours(0,0,0,0);
             
-            // Générer 60 jours
             for (let i = 0; i < 60; i++) {
                 let curr = new Date(calendarStartDate);
                 curr.setDate(calendarStartDate.getDate() + i);
-                
                 const isToday = curr.getTime() === today.getTime();
+                const dayName = curr.toLocaleDateString('fr-FR', {weekday: 'short'});
                 const dayNum = curr.getDate();
-                const dayName = curr.toLocaleDateString('fr-FR', {weekday: 'short'}).replace('.', '');
                 const isWeekend = (curr.getDay() === 0 || curr.getDay() === 6);
-
                 const balance = getBalanceAtDate(curr);
 
                 const col = document.createElement('div');
@@ -440,46 +534,57 @@
                     </div>
                     <div class="col-balance">${Math.round(balance)}€</div>
                 `;
-                container.insertBefore(col, eventsLayer); // Insérer avant le layer d'events
+                container.insertBefore(col, eventsLayer);
             }
 
-            // Rendu des événements (Blocs)
-            // On doit calculer la position absolue (left) et la largeur (width)
-            // 1 jour = 20vw
-            
+            // Events Rendering
             transactions.forEach((t, index) => {
-                const startDate = new Date(t.date);
-                const endDate = t.endDate ? new Date(t.endDate) : new Date(t.date);
+                let startDate = new Date(t.date);
+                let endDate = new Date(t.date);
                 
-                // Différence de jours par rapport au début du calendrier
+                // Si Investissement, on prend la vraie date de fin
+                if (t.type === 'invest' && t.endDate) {
+                    endDate = new Date(t.endDate);
+                }
+
+                // Calcul position et largeur
                 const diffTime = startDate - calendarStartDate;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 
-                // Durée en jours (min 1)
                 let duration = 1;
-                if (t.endDate) {
+                if (t.type === 'invest') {
                     const durTime = endDate - startDate;
                     duration = Math.ceil(durTime / (1000 * 60 * 60 * 24)) + 1;
                 }
 
-                if (diffDays >= 0 && diffDays < 60) {
+                if (diffDays >= -duration && diffDays < 65) { // Afficher si visible
                     const el = document.createElement('div');
                     el.className = `event-block ${t.color || 'c-white'}`;
-                    el.style.left = `calc(${diffDays} * 20vw)`;
-                    el.style.width = `calc(${duration} * 20vw - 4px)`; // -4px pour marge
                     
-                    // Empilement simple pour éviter chevauchement total (random vertical)
-                    // Dans une vraie app complexe, on ferait un algo "Tetris".
-                    // Ici on utilise le jour du mois pour varier la hauteur ou l'index
-                    const topPos = 10 + (index % 8) * 45; 
+                    // Calcul position CSS
+                    // Si diffDays est négatif (commencé avant le calendrier), on coupe
+                    let finalLeft = diffDays;
+                    let finalWidth = duration;
+                    
+                    if (diffDays < 0) {
+                        finalWidth = duration + diffDays; // Réduit la largeur
+                        finalLeft = 0;
+                    }
+                    
+                    el.style.left = `calc(${finalLeft} * 20vw)`;
+                    el.style.width = `calc(${finalWidth} * 20vw - 4px)`;
+                    
+                    // Position verticale pseudo-aléatoire mais stable par index
+                    const topPos = (index % 10) * 40; 
                     el.style.top = topPos + 'px';
-
                     el.onclick = () => openModal(index);
                     
-                    let amountTxt = t.type === 'event' ? '' : `${t.amount}€`;
+                    let icon = '';
+                    if (t.type === 'invest') icon = '⏳ ';
+                    
                     el.innerHTML = `
-                        <div class="event-title">${t.title}</div>
-                        <div class="event-amt">${amountTxt}</div>
+                        <div class="event-title">${icon}${t.title}</div>
+                        <div class="event-amt">${t.type !== 'event' ? t.amount + '€' : ''}</div>
                     `;
                     eventsLayer.appendChild(el);
                 }
@@ -492,19 +597,23 @@
             listContainer.innerHTML = '';
             const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            if (sorted.length === 0) listContainer.innerHTML = '<div style="text-align:center;color:#999;margin-top:50px">Aucune opération</div>';
+            if (sorted.length === 0) listContainer.innerHTML = '<div style="text-align:center;color:var(--gray);margin-top:50px">Aucune opération</div>';
 
             sorted.forEach((t) => {
                 const originalIndex = transactions.indexOf(t);
                 let amountHtml = '';
                 if(t.type !== 'event') {
-                    const color = t.type === 'income' ? 'text-success' : 'text-danger';
-                    const sign = t.type === 'income' ? '+' : '-';
-                    amountHtml = `<div class="t-amount ${color}">${sign}${parseFloat(t.amount).toFixed(2)}</div>`;
+                    let color = 'var(--text)';
+                    let sign = '';
+                    if (t.type === 'income') { color = '#34C759'; sign = '+'; }
+                    else if (t.type === 'expense') { color = '#FF3B30'; sign = '-'; }
+                    else if (t.type === 'invest') { color = '#007AFF'; sign = '⏳ '; }
+                    
+                    amountHtml = `<div class="t-amount" style="color:${color}">${sign}${parseFloat(t.amount).toFixed(2)}</div>`;
                 }
 
                 let dateTxt = new Date(t.date).toLocaleDateString('fr-FR');
-                if (t.endDate && t.endDate !== t.date) {
+                if (t.type === 'invest' && t.endDate) {
                     dateTxt += ' ➔ ' + new Date(t.endDate).toLocaleDateString('fr-FR');
                 }
 
@@ -523,19 +632,47 @@
 
         // --- FORMULAIRE ---
         const modal = document.getElementById('modal');
+        
+        function handleTypeChange() {
+            const type = document.getElementById('input-type').value;
+            const amtGroup = document.getElementById('group-amount');
+            const dateEndGroup = document.getElementById('group-date-end');
+            const lblStart = document.getElementById('label-date-start');
+
+            // Afficher/Cacher montant
+            if (type === 'event') amtGroup.style.display = 'none';
+            else amtGroup.style.display = 'block';
+
+            // Afficher/Cacher Date Fin (Investissement seulement)
+            if (type === 'invest') {
+                dateEndGroup.style.display = 'block';
+                lblStart.innerText = "Date de départ (Sortie argent)";
+            } else {
+                dateEndGroup.style.display = 'none';
+                lblStart.innerText = "Date";
+            }
+        }
+
         function selectColor(colorClass) {
             document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
             document.querySelector('.' + colorClass).classList.add('selected');
             document.getElementById('selected-color').value = colorClass;
         }
-        function toggleAmount() {
-            const type = document.getElementById('input-type').value;
-            const amtInput = document.getElementById('input-amount');
-            if (type === 'event') amtInput.style.display = 'none'; else amtInput.style.display = 'block';
-        }
+
         function openModal(index = -1) {
             modal.style.display = 'flex';
             document.getElementById('edit-index').value = index;
+            
+            // Reset fields
+            document.getElementById('input-title').value = '';
+            document.getElementById('input-amount').value = '';
+            document.getElementById('input-date').valueAsDate = new Date();
+            document.getElementById('input-date-end').valueAsDate = new Date();
+            document.getElementById('input-desc').value = '';
+            document.getElementById('input-type').value = 'expense';
+            selectColor('c-white');
+            document.getElementById('btn-delete').style.display = 'none';
+
             if (index > -1) {
                 const t = transactions[index];
                 document.getElementById('modal-title').innerText = "Modifier";
@@ -543,21 +680,14 @@
                 document.getElementById('input-type').value = t.type;
                 document.getElementById('input-amount').value = t.amount;
                 document.getElementById('input-date').value = t.date;
-                document.getElementById('input-date-end').value = t.endDate || t.date;
+                if(t.endDate) document.getElementById('input-date-end').value = t.endDate;
                 document.getElementById('input-desc').value = t.desc || '';
                 selectColor(t.color || 'c-white');
                 document.getElementById('btn-delete').style.display = 'block';
             } else {
                 document.getElementById('modal-title').innerText = "Nouvel Événement";
-                document.getElementById('input-title').value = '';
-                document.getElementById('input-amount').value = '';
-                document.getElementById('input-date').valueAsDate = new Date();
-                document.getElementById('input-date-end').valueAsDate = new Date();
-                document.getElementById('input-desc').value = '';
-                selectColor('c-white');
-                document.getElementById('btn-delete').style.display = 'none';
             }
-            toggleAmount();
+            handleTypeChange();
         }
         function closeModal() { modal.style.display = 'none'; }
         
@@ -573,8 +703,9 @@
 
             if (!title || !date) return alert("Titre et Date obligatoires");
             
-            // Si pas de date de fin, on prend date de début
-            const finalEndDate = endDate || date;
+            // Logic dates
+            let finalEndDate = date; // Par défaut fin = début (1 jour)
+            if (type === 'invest') finalEndDate = endDate || date;
 
             const item = { title, type, amount: (type==='event'?0:amount), date, endDate: finalEndDate, desc, color };
 
@@ -595,9 +726,9 @@
                 refreshUI();
             }
         }
-        function resetApp() { if(confirm("ATTENTION: Tout effacer ?")) { localStorage.clear(); location.reload(); } }
-        function exportData() { const data = JSON.stringify({t: transactions, s: settings}); prompt("Copie ce texte :", data); }
-        function importData() { const data = prompt("Colle le texte :"); if (data) { try { const parsed = JSON.parse(data); if (parsed.t) transactions = parsed.t; if (parsed.s) settings = parsed.s; saveData(); location.reload(); } catch(e) { alert("Erreur"); } } }
+        function resetApp() { if(confirm("Tout effacer ?")) { localStorage.clear(); location.reload(); } }
+        function exportData() { prompt("Copier :", JSON.stringify({t: transactions, s: settings})); }
+        function importData() { const d = prompt("Coller :"); if(d) { try { const p=JSON.parse(d); transactions=p.t; settings=p.s; saveData(); location.reload(); } catch(e){alert("Erreur");} } }
 
     </script>
 </body>
